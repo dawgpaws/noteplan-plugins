@@ -1,8 +1,7 @@
 // @flow
 //-----------------------------------------------------------------------------
 // Jonathan Clark
-// Last updated 2025-11-01 for v1.15.2 by @jgclark
-// Minimum NP version: 3.9.3
+// Last updated 2025-06-20 for v0.13.0+ by @jgclark
 //-----------------------------------------------------------------------------
 
 import pluginJson from '../plugin.json'
@@ -10,10 +9,10 @@ import { getSettings, percentWithTerm } from './tidyHelpers'
 import {
   daysBetween,
   getDateStringFromCalendarFilename,
+  relativeDateFromDate,
 } from '@helpers/dateTime'
 import {
   nowLocaleShortDateTime,
-  relativeDateFromDate,
 } from '@helpers/NPdateTime'
 import { clo, JSP, logDebug, logError, logInfo, logWarn, overrideSettingsWithEncodedTypedArgs, timer } from '@helpers/dev'
 import {
@@ -28,18 +27,21 @@ import {
 import {
   createOpenOrDeleteNoteCallbackUrl,
   createPrettyRunPluginLink,
+  // createRunPluginCallbackUrl,
   displayTitle,
   getTagParamsFromString,
 } from '@helpers/general'
-import { allNotesSortedByTitle, setIconForNote } from '@helpers/note'
-import { usersVersionHas } from '@helpers/NPVersions'
+import {
+  allNotesSortedByTitle,
+} from '@helpers/note'
 import { noteOpenInEditor, openNoteInNewSplitIfNeeded } from '@helpers/NPWindows'
 import { contentRangeToString } from '@helpers/paragraph'
 import { showMessage } from "@helpers/userInput"
 
+const pluginID = 'np.Tidy'
+
 //----------------------------------------------------------------------------
 
-const pluginID = 'np.Tidy'
 const enoughDifference = 100 // 100 bytes
 const conflictedCopiesBaseFolder = '@Conflicted Copies' // folder to use
 
@@ -62,13 +64,21 @@ type conflictDetails = {
 */
 async function getConflictedNotes(foldersToExclude: Array<string> = []): Promise<Array<conflictDetails>> {
   try {
-    if (!usersVersionHas('noteVersions')) {
-      await showMessage("Command '/List conflicted notes' is only available from NP 3.9.3")
+    if (NotePlan.environment.buildVersion < 1053) {
+      await showMessage("Command '/list conflicted notes' is only available from NP 3.9.3")
       return []
     }
     logDebug(pluginJson, `getConflictedNotes() starting`)
 
     const outputArray: Array<conflictDetails> = []
+    // let relevantFolderList = getFolderListMinusExclusions(foldersToExclude, true, true)
+    // logDebug('getConflictedNotes', `- Found ${relevantFolderList.length} folders to check`)
+    // Get all notes to check
+    // let notes: Array<TNote> = []
+    // for (const thisFolder of relevantFolderList) {
+    //   const theseNotes = getProjectNotesInFolder(thisFolder)
+    //   notes = notes.concat(theseNotes)
+    // }
     let notes = allNotesSortedByTitle(foldersToExclude)
     logDebug('getConflictedNotes', `- Will check all ${notes.length} notes`)
 
@@ -211,14 +221,10 @@ export async function listConflicts(params: string = ''): Promise<void> {
     // If conflict list note is not open in an editor already, write to and open the note. Otherwise just update note.
     if (!noteOpenInEditor(outputFilename)) {
       const resultingNote = await Editor.openNoteByFilename(outputFilename, false, 0, 0, true, true, outputArray.join('\n'))
-      if (resultingNote) {
-        setIconForNote(resultingNote, 'hand-fist', 'red-500', 'solid')
-      }
     } else {
       const noteToUse = DataStore.projectNoteByFilename(outputFilename)
       if (noteToUse) {
         noteToUse.content = outputArray.join('\n')
-        setIconForNote(noteToUse, 'hand-fist', 'red-500', 'solid')
       } else {
         throw new Error(`Couldn't find note '${outputFilename}' to write to`)
       }
@@ -245,8 +251,8 @@ export async function resolveConflictWithCurrentVersion(noteType: NoteType, file
     // Attempt to get spinner to appear, to show that something is happening.
     CommandBar.showLoading(true, 'Deleting other note version')
     logDebug('resolveConflictWithCurrentVersion', `starting for file '${filename}'`)
-    if (!usersVersionHas('noteVersions')) {
-      logWarn('resolveConflictWithCurrentVersion', `Requires NotePlan v3.9.3 or later`)
+    if (NotePlan.environment.buildVersion < 1053) {
+      logWarn('resolveConflictWithCurrentVersion', `can't be run until NP v3.9.3`)
       return
     }
     // Need to handle Calendar and project notes differently
@@ -274,8 +280,8 @@ export async function resolveConflictWithOtherVersion(noteType: NoteType, filena
   try {
     CommandBar.showLoading(true, 'Deleting main note version')
     logDebug('resolveConflictWithOtherVersion', `starting for file '${filename}'`)
-    if (!usersVersionHas('noteVersions')) {
-      logWarn('resolveConflictWithOtherVersion', `Requires NotePlan v3.9.3 or later`)
+    if (NotePlan.environment.buildVersion < 1053) {
+      logWarn('resolveConflictWithOtherVersion', `can't be run until NP v3.9.3`)
       return
     }
     // Need to handle Calendar and project notes differently

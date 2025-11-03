@@ -15,8 +15,6 @@ import { getNPWeekData } from '@helpers/NPdateTime'
 import { getNote } from '@helpers/note'
 import { chooseNote } from '@helpers/userInput'
 import { getNoteTitleFromTemplate } from '@helpers/NPFrontMatter'
-import { replaceDoubleDashes } from '../lib/engine/templateRenderer'
-import { getContentWithLinks } from '@helpers/content'
 
 import NPTemplating from '../lib/NPTemplating'
 import FrontmatterModule from '@templatingModules/FrontmatterModule'
@@ -322,8 +320,8 @@ async function prependOrAppendContentUnderExistingHeading(note: CoreNoteFields, 
  * @returns {Object} processed arguments object and validation info
  */
 export function processTemplateArguments(selectedTemplate: string, args: string | Object | null): { argObj: Object, isRunFromCode: boolean, passedTemplateBody: string | null } {
-  let isRunFromCode: boolean = Boolean(selectedTemplate.length === 0 && args && typeof args === 'object' && (args.getNoteTitled || args.templateBody))
-  let passedTemplateBody: string | null = isRunFromCode && args && typeof args === 'object' && args.templateBody ? String(args.templateBody) : null
+  const isRunFromCode: boolean = Boolean(selectedTemplate.length === 0 && args && typeof args === 'object' && (args.getNoteTitled || args.templateBody))
+  const passedTemplateBody: string | null = isRunFromCode && args && typeof args === 'object' && args.templateBody ? String(args.templateBody) : null
 
   const argObj =
     args && typeof args === 'object'
@@ -331,15 +329,6 @@ export function processTemplateArguments(selectedTemplate: string, args: string 
       : args && typeof args === 'string' && args.includes('__isJSON__')
       ? JSON.parse(args.replace('__isJSON__', ''))
       : overrideSettingsWithStringArgs({}, args || '')
-
-  if (!passedTemplateBody && argObj.templateBody) {
-    passedTemplateBody = String(argObj.templateBody)
-    isRunFromCode = true
-  }
-  logDebug(
-    pluginJson,
-    `processTemplateArguments: isRunFromCode:${String(isRunFromCode)} passedTemplateBody:${passedTemplateBody || ''}\nargObj:${JSON.stringify(argObj, null, 2)} `,
-  )
 
   return { argObj, isRunFromCode, passedTemplateBody }
 }
@@ -358,7 +347,7 @@ export async function getTemplateData(selectedTemplate: string, isRunFromCode: b
   if (selectedTemplate && !trTemplateNote) {
     failed = true
   } else {
-    templateData = selectedTemplate ? getContentWithLinks(trTemplateNote) : ''
+    templateData = selectedTemplate ? trTemplateNote?.content || '' : ''
   }
 
   return { templateData, trTemplateNote, failed }
@@ -433,20 +422,8 @@ export async function handleNewNoteCreation(selectedTemplate: string, data: Obje
         const note = await DataStore.projectNoteByFilename(filename)
         note && DataStore.updateCache(note, true) // try to update the note cache so functions called after this will see the new note
         if (note && content) {
-          logDebug(pluginJson, `NPTemplateRunner::handleNewNoteCreation adding content to new note:${filename}; content:"${content}"`)
-          if (content.startsWith('--') && (content.includes('title: ') || content.includes('--\n#'))) {
-            // if the content has a frontmatter title or a double/triple dasy and a first-following line title,
-            // then we should replace the entire note with the contents
-            logDebug(
-              pluginJson,
-              `NPTemplateRunner::handleNewNoteCreation template body has title specified; replacing entire note content with content from template:${filename}; content:"${content}"`,
-            )
-            // replace double/triple dashes with triple dashes so they are treated as frontmatter
-            note.content = replaceDoubleDashes(content)
-          } else {
-            logDebug(pluginJson, `NPTemplateRunner::handleNewNoteCreation template body does not have title specified; appending content to note:${filename}; content:"${content}"`)
-            note.appendParagraph(content, 'text')
-          }
+          logDebug(pluginJson, `NPTemplateRunner::handleNewNoteCreation adding content to new note:${filename}`)
+          note.appendParagraph(content, 'text')
           // trying anything to force the cache to recognize this note by title soon after creation
           note && DataStore.updateCache(note, true) // try to update the note cache so functions called after this will see the new note
         }
@@ -708,9 +685,8 @@ export async function handleRegularNote(noteTitle: string, selectedTemplate: str
  * @param {string | Object} args - the arguments to pass to the template (either a string of key=value pairs or an object)
  * @author @dwertheimer
  */
-export async function templateRunnerExecute(_selectedTemplate?: string = '', openInEditor?: boolean = false, args?: string | Object | null = ''): Promise<void> {
+export async function templateRunnerExecute(selectedTemplate?: string = '', openInEditor?: boolean = false, args?: string | Object | null = ''): Promise<void> {
   try {
-    const selectedTemplate = _selectedTemplate.trim()
     const start = new Date()
     logDebug(
       pluginJson,
@@ -721,9 +697,6 @@ export async function templateRunnerExecute(_selectedTemplate?: string = '', ope
 
     // STEP 1: Process Arguments Passed through Callback or Code
     const { argObj, isRunFromCode, passedTemplateBody } = processTemplateArguments(selectedTemplate, args)
-    logDebug(pluginJson, `templateRunnerExecute after processTemplateArguments: isRunFromCode:${String(isRunFromCode)}`)
-    clo(argObj, `templateRunnerExecute argObj`)
-    clo(passedTemplateBody, `templateRunnerExecute passedTemplateBody`)
 
     if (selectedTemplate.length !== 0 || isRunFromCode || passedTemplateBody) {
       clo(argObj, `templateRunnerExecute argObj`)
@@ -747,17 +720,7 @@ export async function templateRunnerExecute(_selectedTemplate?: string = '', ope
 
         // STEP 3: Create a new note if needed
         const newNoteCreated = await handleNewNoteCreation(selectedTemplate, data, argObj, passedTemplateBody || '')
-        if (newNoteCreated) {
-          if (openInEditor) {
-            if (typeof newNoteCreated === 'string') {
-              logDebug(pluginJson, `templateRunnerExecute: Opening new note: "${newNoteCreated}"`)
-              await Editor.openNoteByFilename(newNoteCreated)
-            }
-          } else {
-            logDebug(pluginJson, `templateRunnerExecute: New note created but not opening in editor: "${String(newNoteCreated)}"`)
-          }
-          return
-        }
+        if (newNoteCreated) return
         logDebug(pluginJson, `TR Total Running Time -  after Step 3: ${timer(start)}`)
 
         // STEP 4: Render the Template Body (with any passed arguments)

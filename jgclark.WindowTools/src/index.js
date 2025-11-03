@@ -4,7 +4,7 @@
 //---------------------------------------------------------------
 // Window Sets commands
 // Jonathan Clark
-// Last updated 2025-10-26 for v1.4.0 by @jgclark
+// Last updated 15.3.2024 for v1.2.0 by @jgclark
 //---------------------------------------------------------------
 
 // allow changes in plugin.json to trigger recompilation
@@ -12,9 +12,6 @@ import pluginJson from '../plugin.json'
 import * as wsh from './WTHelpers'
 import { JSP, logDebug, logInfo, logError } from "@helpers/dev"
 import { pluginUpdated, updateSettingData } from '@helpers/NPConfiguration'
-
-//---------------------------------------------------------------
-// Constants
 
 const pluginID = 'jgclark.WindowTools'
 
@@ -35,7 +32,6 @@ export {
 export {
   constrainMainWindow,
   moveCurrentSplitToMain,
-  resetMainWindow,
   swapSplitWindows
 } from './otherWindowTools'
 
@@ -55,14 +51,6 @@ export {
 export {
   logWindowsList,
   setEditorSplitWidth,
-} from '@helpers/NPWindows'
-
-export {
-  logSidebarWidth,
-  setSidebarWidth,
-  toggleSidebar,
-  openSidebar,
-  closeSidebar,
 } from '@helpers/NPWindows'
 
 export function init(): void {

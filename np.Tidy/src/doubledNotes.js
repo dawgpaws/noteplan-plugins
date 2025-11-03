@@ -1,31 +1,30 @@
 // @flow
 //-----------------------------------------------------------------------------
 // Jonathan Clark
-// Last updated 2025-11-01 for v1.15.2 by @jgclark
+// Last updated 2025-06-20 for v0.14.7+ by @jgclark
 //-----------------------------------------------------------------------------
 
 import pluginJson from '../plugin.json'
 import { constrainMainWindow } from '@helpers/NPWindows'
 import { getSettings, percentWithTerm } from './tidyHelpers'
-import { relativeDateFromDate } from '@helpers/NPdateTime'
-import { clo, JSP, logDebug, logError, logInfo, logWarn, timer } from '@helpers/dev'
-import { createPrettyRunPluginLink, createRunPluginCallbackUrl, displayTitle, getTagParamsFromString } from '@helpers/general'
-import { setIconForNote } from '@helpers/note'
+import {
+  relativeDateFromDate,
+} from '@helpers/dateTime'
+import { clo, JSP, logDebug, logError, logInfo, timer } from '@helpers/dev'
+import {
+  createPrettyRunPluginLink,
+  createRunPluginCallbackUrl,
+  displayTitle,
+  getTagParamsFromString,
+} from '@helpers/general'
+import { getProjectNotesInFolder } from '@helpers/folders'
 import { nowLocaleShortDateTime } from '@helpers/NPdateTime'
-import { usersVersionHas } from '@helpers/NPVersions'
-import { noteOpenInEditor } from '@helpers/NPWindows'
-import { showMessage, showMessageYesNo } from "@helpers/userInput"
-
-//----------------------------------------------------------------------------
-// Constants
+import { noteOpenInEditor, openCalendarNoteInSplit } from '@helpers/NPWindows'
+import { showMessage } from "@helpers/userInput"
 
 const pluginID = 'np.Tidy'
-const MAX_PERCENT_DIFF_FOR_DOUBLED_NOTE = 20
-const OUTPUT_TITLE = 'Potentially Duplicated Content notes'
-const FALLBACK_OUTPUT_FILENAME = 'Possible Duplicated Content.md'
 
 //----------------------------------------------------------------------------
-// Type definitions
 
 type DoubleDetails = {
   filename: string,
@@ -46,14 +45,11 @@ function findPotentialDoubledNotes(): Array<DoubleDetails> {
     logDebug(pluginJson, `findPotentialDoubledNotes() starting`)
     let outputArray: Array<DoubleDetails> = [] // of NP filenames
 
-    // Get all Calendar notes to check (that are at least 4 lines long)
-    const calendarNotes = DataStore.calendarNotes.slice().filter(n => n.content?.length ?? 0 >= 20)
+    // Get all Calendar notes to check (that are at least 8 lines long)
+    const calendarNotes = DataStore.calendarNotes.slice().filter(n => n.paragraphs.length > 8)
 
     // Look at each and see if it looks doubled
-    let i = 0
     for (const n of calendarNotes) {
-      i++
-      CommandBar.showLoading(true, `Checking note ${String(i)}`, i / calendarNotes.length)
       // Split note content into halves
       const contentLength = n.paragraphs.length
       // Get all content by joining .content of all paragraphs
@@ -66,14 +62,13 @@ function findPotentialDoubledNotes(): Array<DoubleDetails> {
       // Compare the two halves, by getting length of diffs
       const allDiffRanges = NotePlan.stringDiff(firstHalfContent, secondHalfContent)
       const totalDiffBytes = allDiffRanges.reduce((a, b) => a + Math.abs(b.length), 0)
-      const percentDiff: number = (totalDiffBytes > 0) ? ((totalDiffBytes / allContent.length / 2) * 100) : 0
-      // If diff is <= MAX_PERCENT_DIFF_FOR_DOUBLED_NOTE%, then it's likely to be doubled
-      if (percentDiff <= MAX_PERCENT_DIFF_FOR_DOUBLED_NOTE) {
-        outputArray.push({ filename: n.filename, contentLength: allContent.length, matchLevel: (100-percentDiff) })
-        logDebug('findPotentialDoubledNotes', `${n.filename} = ${percentDiff}`)
+      const percentDiff: number = (totalDiffBytes > 0) ? ((totalDiffBytes / allContent.length / 2) * 100) : 100
+      // If diff is <= 10%, then it's likely to be doubled
+      if (percentDiff <= 10) {
+        // logDebug('findPotentialDoubledNotes', `${n.filename} = ${percentDiff}`)
+        outputArray.push({ filename: n.filename, contentLength: allContent.length, matchLevel: percentDiff })
       }
     }
-    CommandBar.showLoading(false)
     return outputArray
   }
   catch (err) {
@@ -91,20 +86,11 @@ export async function listPotentialDoubles(params: string = ''): Promise<void> {
   try {
     logDebug(pluginJson, `listPotentialDoubles: Starting with params '${params}'`)
     let config = await getSettings()
-    const outputFilename = config.doubledNoteFilename ?? FALLBACK_OUTPUT_FILENAME
+    const outputFilename = config.doubledNoteFilename ?? 'Possible Doubled Notes.md'
 
     // Decide whether to run silently
     const runSilently: boolean = await getTagParamsFromString(params ?? '', 'runSilently', false)
     logDebug('removeDoneMarkers', `runSilently = ${String(runSilently)}`)
-
-    // If we're running NP 3.19.2+ then show a message about the new built-in feature
-    if (!runSilently && usersVersionHas('contentDeduplicator')) {
-      const answer = await showMessageYesNo(`NotePlan has since added a "Content deduplicator tool" (in Sync > Advanced). This is quicker, but it only finds exact duplication, whereas this command allows for a 15% margin of difference, which I found necessary.\nShall I continue?`, ['Continue', 'Cancel'], 'Doubled Content Finder tool')
-      if (answer === 'Cancel') {
-        logDebug('listPotentialDoubledNotes', `User cancelled`)
-        return
-      }
-    }
 
     CommandBar.showLoading(true, `Finding possible doubles`)
     await CommandBar.onAsyncThread()
@@ -118,37 +104,32 @@ export async function listPotentialDoubles(params: string = ''): Promise<void> {
     const outputArray: Array<string> = []
 
     // Start with an x-callback link under the title to allow this to be refreshed easily
-    outputArray.push(`# ${OUTPUT_TITLE}`)
-    const xCallbackRefreshButton = createPrettyRunPluginLink('🔄 Click to refresh', 'np.Tidy', 'List duplicated content', [])
+    outputArray.push(`# Potentially Doubled notes`)
+    const xCallbackRefreshButton = createPrettyRunPluginLink('🔄 Click to refresh', 'np.Tidy', 'List doubled notes', [])
 
     const summaryLine = `Found ${doubles.length} potential doubles at ${nowLocaleShortDateTime()}. ${xCallbackRefreshButton}`
     outputArray.push(summaryLine)
 
-    // Write out details for each possible duplicated content note
     for (const d of doubles) {
       const n = DataStore.calendarNoteByDateString(d.filename.split('.')[0])
       if (n) {
         const titleToDisplay = displayTitle(n)
         const openURL = createRunPluginCallbackUrl('np.Tidy', 'openCalendarNoteInSplit', [n.filename, String(Math.round(d.contentLength / 2))])
-
-        outputArray.push(`- ${titleToDisplay}: match ${d.matchLevel.toPrecision(3)}% (${String(n.paragraphs?.length ?? 0)} lines, updated ${relativeDateFromDate(n.changedDate)}) [Open note](${openURL})`)
+        // logDebug(pluginJson, `- ${titleToDisplay}`)
+        // Write out all details for this dupe
+        outputArray.push(`- ${titleToDisplay} [open note in split](${openURL}): match ${d.matchLevel.toPrecision(3)}. (${String(n.paragraphs?.length ?? 0)} lines, ${String(d.contentLength)} bytes, last updated ${relativeDateFromDate(n.changedDate)})`)
       } else {
         // error
-        logWarn('listPotentialDoubledNotes', `- Couldn't find note '${d.filename}'`)
       }
     }
 
     // If note is not open in an editor already, write to and open the note. Otherwise just update note.
     if (!noteOpenInEditor(outputFilename)) {
       const resultingNote = await Editor.openNoteByFilename(outputFilename, false, 0, 0, true, true, outputArray.join('\n'))
-      if (resultingNote) {
-        setIconForNote(resultingNote, 'code-branch', 'orange-500')
-      }
     } else {
       const noteToUse = DataStore.projectNoteByFilename(outputFilename)
       if (noteToUse) {
         noteToUse.content = outputArray.join('\n')
-        setIconForNote(noteToUse, 'code-branch', 'orange-500')
       } else {
         throw new Error(`Couldn't find note '${outputFilename}' to write to`)
       }
@@ -156,7 +137,7 @@ export async function listPotentialDoubles(params: string = ''): Promise<void> {
 
     // Show message if no doubles found
     if (doubles.length === 0 && !runSilently) {
-      await showMessage(`No possible duplicated content found! 🥳`)
+      await showMessage(`No possible doubles found! 🥳`)
     }
   }
   catch (err) {

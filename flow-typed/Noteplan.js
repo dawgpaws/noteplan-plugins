@@ -67,7 +67,7 @@ declare interface TEditor extends CoreNoteFields {
    * Note: not all of the paragraph object data is complete, e.g. "headingLevel", "heading" and other properties may not be set properly.
    * Use the result and a map to get all the correct data, e.g.:
    * const selectedParagraphs = Editor.selectedParagraphs.map((p) => Editor.paragraphs[p.lineIndex])
-   * WARNING: this does not include the frontmatter lines in the 'lineIndex' count (since ~v3.16.3). JGC has attempted to find a way around this, but quickly hit "Attempted to assign to readonly property" runtime errors.
+   * WARNING: remember this will not include the frontmatter lines in the 'lineIndex' count (since ~v3.16.3)
    */
   +selectedParagraphs: $ReadOnlyArray<TParagraph>;
   /**
@@ -114,12 +114,13 @@ declare interface TEditor extends CoreNoteFields {
    * @param {boolean?} newWindow - (optional) Open note in new window (default = false)?
    * @param {number?} highlightStart - (optional) Start position of text highlighting
    * @param {number?} highlightEnd - (optional) End position of text highlighting
-   * @param {boolean?} splitView - (optional) Open note in a new split view
-   * @param {boolean?} createIfNeeded - (optional) Create the note with the given filename if it doesn't exist
-   * @param {string?} content - (optional) Content to fill the note (replaces contents if the note already existed)
-   * @param {boolean?} stayInSpace? - (optional; default = false) Stay in the current Teamspace or Private space for the given filename (available from v3.17.0)
+   * @param {boolean?} splitView - (optional) Open note in a new split view (Note: Available from v3.4)
+   * @param {boolean?} createIfNeeded - (optional) Create the note with the given filename if it doesn't exist (only project notes, v3.5.2+)
+   * @param {string?} content - (optional) Content to fill the note (replaces contents if the note already existed) (from v3.7.2)
+   * @param {boolean?} stayInSpace? - (optional; default = false) Stay in the current Teamspace or Private space for the given filename
    * @return {Promise<TNote>} - When the note has been opened, a promise will be returned (use with await ... or .then())
-   * Note: some parameters introduced in v3.4, v3.5.2, and v3.7.2
+   * Note: some parameters introduced in v3.4 and v3.5.2
+   * Note: stayInSpace parameter available from v3.17.0
    */
   openNoteByFilename(
     filename: string,
@@ -433,10 +434,8 @@ declare interface TEditor extends CoreNoteFields {
    *   rect.height -= 50
    *   Editor.windowRect = rect
    *
-   * WARNING: from JGC: for main Editor window, x/y are the position and size of the whole window (including the main sidebar and any split windows).
-   * WARNING: from JGC: for split Editor windows, x/y are 0,0, but width/height are accurate.
+   * Note: from JGC: for split & main windows, x/y returns the position and size of the whole window
    * WARNING: from JGC: for split & main windows, height is reliable, but width doesn't always seem to be consistent.
-   * WARNING: from JGC: trying to set this for a split window doesn't seem to do anything.
    * WARNING: from JGC: for floating Editor windows, setting this doesn't seem reliable
    * Note: Available with v3.9.1 build 1020
    */
@@ -1485,13 +1484,11 @@ declare interface Paragraph {
   +contentRange: TRange | void;
   /**
    * Paragraph.lineIndex
-   * Get or set the line index of the paragraph.
+   * Get the line index of the paragraph.
    * Note: this can become inaccurate if other content changes in the note; it is not automatically recalculated. Re-fetch paragraphs to avoid this.
    * WARNING: this can be different in `Editor` and `Note` contexts, even for the same paragraph, because frontmatter lines are not included in the `Editor` context since ~v3.16.3.
-   * WARNING: the same paragraph can have different values of this property for `Editor.selectedParagraphs` and `Editor.paragraphs`, because frontmatter lines are not included in the `Editor.selectedParagraphs` context since ~v3.16.3.
-   * Note: this is settable from v3.19.2 (build 1440 onwards), to help deal with the issue mentioned above.
    */
-lineIndex: number;
+  +lineIndex: number;
   /**
    * Paragraph.date
    * Get the date of the paragraph, if any (in case of scheduled tasks).
@@ -1605,18 +1602,7 @@ declare interface Note extends CoreNoteFields {
    * Specifically this includes paragraphs with >YYYY-MM-DD, @YYYY-MM-DD, <YYYY-MM-DD, >today, @done(YYYY-MM-DD HH:mm), but only in non-calendar notes (because currently NotePlan doesn't create references between daily notes).
    * Note: Available from v3.2.0
    */
-+datedTodos: $ReadOnlyArray < TParagraph >;
-/**
- * Note.frontmatterAttributesArray
-* Getter that returns the ordered frontmatter key-value pairs inside the note as individual objects inside an array with two values: "key" and "value". Ordered means they are ordered as they appear in the same order as inside the note.
-* @returns {Array<{ key: string, value: string }>}
-* @example
-*   const note = DataStore.projectNoteByTitle("Stoicism")[0]
-*   for (const attribute of note.frontmatterAttributesArray) {
-*     console.log(attribute.key + ": " + attribute.value)
-*   }
-*/
-+frontmatterAttributesArray: $ReadOnlyArray < { key: string, value: string } >;
+  +datedTodos: $ReadOnlyArray<TParagraph>;
 }
 
 /**
@@ -2381,6 +2367,28 @@ declare class NotePlan {
    */
   static +environment: Object;
   /**
+   * NotePlan.ai()
+   * This is an async function, use it with "await". Sends a prompt to OpenAI and returns the result.
+   * Optionally send the content of notes as well to process by specifying them in the list 'filenames', which is an array. For example ["note1.md", "folder/note2.md"]. This needs to be the exact path to the note. Your note extension might differ, the default is .txt, if you haven't changed it.
+   * For calendar notes, you can use YYYYMMDD.md, like 20241101.md, or 2024-W10.md for weeks, etc. Natural language input is also supported like "this week", "today", "tomorrow", "this month", "next year", etc.
+   * If you need to send a relative list of calendar notes, every note of the "last 7 days", you can use exactly this as the filename. The structure is as followed:
+   *  1. use "next" or "last",
+   *  2. define a number, like "7",
+   *  3. define one of the timeframes: "days", "weeks", "months", "quarters", "years".
+   * The timeframe also defines what kind of note is being accessed. Use "weeks" if you want to send weekly notes, "days" for daily notes etc.
+   * You can also define a folder to send all the notes inside this folder. Use the path of the folder prefixed with "/", like "/Projects/Work".
+   * To use a note titled 'this week' set useStrictFilenames = true.
+   * If you are using your own Open AI API key, you can define a model, for example "o1", or "o3-mini". By default NotePlan uses GPT-4o.
+   * More details at https://help.noteplan.co/article/233-ai-prompts-in-templates
+   * Note: Available from v3.15.1
+   * @param {string} prompt
+   * @param {Array<string>} filenames
+   * @param {boolean} useStrictFilenames
+   * @param {string} model (available from v3.16.3)
+   * @returns {Promise<string>}
+   */
+  static ai(prompt: string, filenames: Array<string>, useStrictFilenames: boolean, model?: string): Promise<string>;
+  /**
    * NotePlan.selectedSidebarFolder
    * The selected sidebar folder (useful when a note is not showing in Editor, which is then null)
    * Note: available from v3.5.1
@@ -2427,164 +2435,19 @@ declare class NotePlan {
    * Note: Available from v3.8.1 build 973
    * @returns {Array<HTMLView>}
    */
-static + htmlWindows: Array < HTMLView >;
-  /**
-   * NotePlan.isSidebarCollapsed()
-   * Note: Available from v3.19.2 (macOS only)
-   * Checks whether the sidebar is currently collapsed.
-   * Returns false on iOS/iPadOS or if the sidebar is not available.
-   * @returns {boolean}
-   */
-  static isSidebarCollapsed(): boolean;
-  /**
-   * NotePlan.getSidebarWidth()
-   * Gets the current width of the sidebar in pixels.
-   * Returns 0 on iOS/iPadOS or if the sidebar is not available.
-   * Note: Available from v3.19.2 (macOS only).
-   * Note: @jgclark reports this can return fractional widths!
-   * @returns {number} The current sidebar width in pixels
-   * 
-   * @example
-   * // Get the current sidebar width
-   * const currentWidth = NotePlan.getSidebarWidth();
-   * console.log(`Sidebar width: ${String(currentWidth)}px`);
-   */
-  static getSidebarWidth(): number;
-  /**
-   * NotePlan.setSidebarWidth()
-  * Sets the width of the sidebar in pixels.
-  * The width is persisted and will be applied when the sidebar is visible. (@jgclark reports this has failed to work in practice.)
-  * Note: @jgclark reports the minimum width that works is 200 pixels. Therefore setting to 0 pixels does _not_ hide the sidebar.
-  * Note: Available from v3.19.2 (macOS only).
-  * @param {number} width - The width in pixels (e.g., 250)
-  *
-  * @example
-  * // Set sidebar width to 300 pixels
-  * NotePlan.setSidebarWidth(300);
-  * 
-  * @example
-  * // Set sidebar to a narrow width
-  * NotePlan.setSidebarWidth(200);
-  */
-  static setSidebarWidth(width: number): void;
-  /**
-   * NotePlan.toggleSidebar()
-  * Toggles the sidebar visibility on iOS and macOS.
-  * Note: Available from v3.19.2.
-  * @param {boolean} forceCollapse - If true, forces the sidebar to hide/collapse.
-  * @param {boolean} forceOpen - If true, forces the sidebar to show/expand.
-  * @param {boolean} animated - If true (default), animates the sidebar toggle. If false, instantly shows/hides without animation (macOS only).
-  * Note: If both forceCollapse and forceOpen are true, forceOpen takes precedence on macOS.
-  * 
-  * @example
-  * // Toggle the sidebar (show if hidden, hide if shown)
-  * NotePlan.toggleSidebar(false, false, true);
-  * 
-  * @example
-  * // Force show/open the sidebar with animation
-  * NotePlan.toggleSidebar(false, true, true);
-  * 
-  * @example
-  * // Force hide/collapse the sidebar with animation
-  * NotePlan.toggleSidebar(true, false, true);
-  * 
-  * @example
-  * // Force hide the sidebar without animation (macOS only)
-  * NotePlan.toggleSidebar(true, false, false);
-  */
-  static toggleSidebar(forceCollapse: boolean, forceOpen: boolean, animated: boolean): void;
+  static +htmlWindows: Array<HTMLView>;
   /**
    * NotePlan.ai()
+   * Note: Available from v3.15.1 (macOS build 1300)
    * This is an async function, use it with "await". Sends a prompt to OpenAI and returns the result.
    * Optionally send the content of notes as well to process by specifying them in the list 'filenames', which is an array. For example ["note1.md", "folder/note2.md"]. This needs to be the exact path to the note. Your note extension might differ, the default is .txt, if you haven't changed it.
    * For calendar notes, you can use YYYYMMDD.md, like 20241101.md, or 2024-W10.md for weeks, etc. Natural language input is also supported like "this week", "today", "tomorrow", "this month", "next year", etc.
-   * If you need to send a relative list of calendar notes, every note of the "last 7 days", you can use exactly this as the filename. The structure is as followed:
-   *  1. use "next" or "last",
-   *  2. define a number, like "7",
-   *  3. define one of the timeframes: "days", "weeks", "months", "quarters", "years".
-   * The timeframe also defines what kind of note is being accessed. Use "weeks" if you want to send weekly notes, "days" for daily notes etc.
-   * You can also define a folder to send all the notes inside this folder. Use the path of the folder prefixed with "/", like "/Projects/Work".
-   * To use a note titled 'this week' set useStrictFilenames = true.
-   * If you are using your own Open AI API key, you can define a model, for example "o1", or "o3-mini". By default NotePlan uses GPT-4o.
-   * More details at https://help.noteplan.co/article/233-ai-prompts-in-templates
-   * Note: Available from v3.15.1
    * @param {string} prompt
-   * @param {Array<string>} filenames
-   * @param {boolean} useStrictFilenames
-   * @param {string} model (available from v3.16.3)
+   * @param {Arraystring> } filenames
+   * @param {boolean} useStrictFilenames?
    * @returns {Promise<string>}
    */
-  static ai(prompt: string, filenames: Array < string >, useStrictFilenames: boolean, model ?: string): Promise < string >;
-  /**
-  * NotePlan.getWeather()
-  * Fetches current weather data and forecast using OpenWeatherMap API.
-  * Automatically detects location via IP geolocation or uses provided coordinates.
-  * Returns formatted weather information with emojis and detailed weather data.
-  * Note: Available from v3.19.2 (build 1441/1362 on macOS/iOS)
-  * 
-  * @param {string} units - Temperature units: "metric" (Celsius, m/s) or "imperial" (Fahrenheit, mph)
-  * @param {number} latitude - Latitude coordinate (use 0 for IP-based location detection)
-  * @param {number} longitude - Longitude coordinate (use 0 for IP-based location detection)
-  * @return {Promise<Object>} Promise that resolves to weather data object with formatted output and detailed information
-  * 
-  * @example
-  * // Get weather for current location (IP-based) using await
-  * const weather = await NotePlan.getWeather("metric", 0, 0);
-  * console.log(weather.formatted);
-  * // Output:
-  * // ### San Francisco Weather for Tue, 2025-10-28
-  * // ☀️ **Clear Sky** - High: **18°C**, Low: **12°C**, Wind: **8m/s**, Visibility: **10km**
-  * // 🌅 Sunrise: **7:15 AM**, Sunset: **6:30 PM**, Peak UVI: **5**
-  * 
-  * @example
-  * // Get weather for specific location (New York City) with error handling
-  * try {
-  *   const weather = await NotePlan.getWeather("imperial", 40.7128, -74.0060);
-  *   console.log(`${weather.emoji} ${weather.condition}`);
-  *   console.log(`Temperature: ${weather.temperature}${weather.temperatureUnit}`);
-  *   console.log(`High: ${weather.highTemp}, Low: ${weather.lowTemp}`);
-  *   console.log(`Humidity: ${weather.humidity}%`);
-  *   console.log(`Wind: ${weather.windSpeed}${weather.windSpeedUnit}`);
-  * } catch (error) {
-  *   console.log("Error fetching weather:", error);
-  * }
-  * 
-  * @example
-  * // Get weather for London and insert into editor
-  * const weather = await NotePlan.getWeather("metric", 51.5074, -0.1278);
-  * Editor.insertTextAtCursor(weather.formatted);
-  * 
-  * @example
-  * // Simple usage - just get and display formatted weather
-  * const weather = await NotePlan.getWeather("imperial", 0, 0);
-  * console.log(weather.formatted);
-  * 
-  * @returns {Object} weather - Weather data object
-  * @returns {string} weather.formatted - Pre-formatted markdown weather output with emojis
-  * @returns {string} weather.cityName - City name (from IP location or reverse geocoding)
-  * @returns {number} weather.temperature - Current temperature
-  * @returns {string} weather.temperatureUnit - Temperature unit symbol (°C or °F)
-  * @returns {number} weather.apparentTemperature - Feels-like temperature
-  * @returns {number} weather.humidity - Humidity percentage
-  * @returns {number} weather.windSpeed - Wind speed
-  * @returns {string} weather.windSpeedUnit - Wind speed unit (m/s or mph)
-  * @returns {number} weather.windDirection - Wind direction in degrees
-  * @returns {number} weather.uvIndex - UV index
-  * @returns {string} weather.condition - Weather condition description
-  * @returns {string} weather.emoji - Weather emoji based on condition
-  * @returns {string} weather.iconCode - OpenWeatherMap icon code
-  * @returns {number} weather.visibility - Visibility distance
-  * @returns {string} weather.visibilityUnit - Visibility unit (km)
-  * @returns {number} weather.highTemp - Today's high temperature
-  * @returns {number} weather.lowTemp - Today's low temperature
-  * @returns {string} weather.sunrise - Sunrise time (formatted as h:mm AM/PM)
-  * @returns {string} weather.sunset - Sunset time (formatted as h:mm AM/PM)
-  * @returns {Object} weather.location - Location coordinates
-  * @returns {number} weather.location.latitude - Latitude
-  * @returns {number} weather.location.longitude - Longitude
-  * @returns {string} weather.location.cityName - City name
-  */
-  static getWeather(units: string, latitude: number, longitude: number): Promise < Object >;
+  static ai(prompt: string, filenames: Array<string>, useStrictFilenames: boolean): Promise<string>;
 }
 
 declare class HTMLView {

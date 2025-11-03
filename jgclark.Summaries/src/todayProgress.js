@@ -2,15 +2,35 @@
 //-----------------------------------------------------------------------------
 // Progress update for Today only
 // Jonathan Clark, @jgclark
-// Last updated 2025-10-07 for v1.0.0, @jgclark
+// Last updated 30.3.2024 for v0.20.1+, @jgclark
 //-----------------------------------------------------------------------------
 
 import pluginJson from '../plugin.json'
-import { gatherOccurrences, generateProgressUpdate, getSummariesSettings, type OccurrencesToLookFor, type SummariesConfig } from './summaryHelpers'
-import { todaysDateISOString } from '@helpers/dateTime'
-import { toNPLocaleDateString } from '@helpers/NPdateTime'
-import { clo, logDebug, logError, logInfo, logWarn, timer } from '@helpers/dev'
-import { createPrettyRunPluginLink, formatWithFields, getTagParamsFromString } from '@helpers/general'
+import {
+  gatherOccurrences,
+  generateProgressUpdate,
+  getSummariesSettings,
+  type OccurrencesToLookFor,
+  type SummariesConfig,
+} from './summaryHelpers'
+import {
+  // hyphenatedDate,
+  todaysDateISOString,
+  // YYYYMMDDDateStringFromDate,
+  // withinDateRange
+} from '@helpers/dateTime'
+import { toNPLocaleDateString, } from '@helpers/NPdateTime'
+import {
+  clo, logDebug, logError, logInfo, logWarn, timer,
+  // overrideSettingsWithEncodedTypedArgs,
+} from '@helpers/dev'
+import {
+  // CaseInsensitiveMap,
+  createPrettyRunPluginLink,
+  // createRunPluginCallbackUrl, displayTitle,
+  formatWithFields,
+  getTagParamsFromString,
+} from '@helpers/general'
 import { replaceSection } from '@helpers/note'
 
 //-------------------------------------------------------------------------------
@@ -22,8 +42,9 @@ import { replaceSection } from '@helpers/note'
  */
 export async function todayProgressFromTemplate(params: string = ''): Promise<string> {
   try {
-    logDebug(pluginJson, `todayProgressFromTemplate() starting with params '${typeof params === 'string' ? params : JSON.stringify(params)}' (type: ${typeof params})`)
+    logDebug(pluginJson, `todayProgressFromTemplate() starting with params '${params}' (type: ${typeof params})`)
 
+    // let configFromParams = JSON.parse(params)
     const config = await getSummariesSettings()
     const heading = await getTagParamsFromString(params, 'todayProgressHeading', config.todayProgressHeading)
     const itemsToShowStr = await getTagParamsFromString(params, 'todayProgressItems', config.todayProgressItems)
@@ -32,10 +53,11 @@ export async function todayProgressFromTemplate(params: string = ''): Promise<st
     }
 
     const itemsToShowArr = itemsToShowStr.split(',') ?? []
-    const summaryStr = (await makeTodayProgress(itemsToShowArr, 'template', heading)) ?? '<error>'
-    logInfo('todayProgressFromTemplate()', `-> ${summaryStr}`)
+    const summaryStr = await makeTodayProgress(itemsToShowArr, 'template', heading) ?? '<error>'
+    logInfo('todayProgressFromTemplate()', '-> ' + summaryStr)
     return summaryStr
-  } catch (err) {
+  }
+  catch (err) {
     logError(pluginJson, `${err.message} in todayProgressFromTemplate()`)
     return '❗️Error: please open Plugin Console and re-run.>' // for completeness
   }
@@ -43,14 +65,16 @@ export async function todayProgressFromTemplate(params: string = ''): Promise<st
 
 /**
  * This is the entry point for /command or x-callback use of makeProgressUpdate
- * @param {?string} itemsToShowArg as comma-separated list of @mentions or #tags (optional). If not provided, then the default items in setting 'todayProgressItems' will be used.
+ * @param {?string} itemsToShowArg as comma-separated list of @mentions or #tags
  * @param {?string} headingArg
  */
 export async function todayProgress(itemsToShowArg?: string, headingArg?: string): Promise<void> {
   try {
-    logDebug(pluginJson, `todayProgress() starting with itemsToShowArg '${itemsToShowArg ? itemsToShowArg : '-'}'`)
-    const itemsToShowArr: Array<string> = itemsToShowArg ? itemsToShowArg.split(',') : []
-    logDebug('todayProgress()', `itemsToShowArr '${String(itemsToShowArr)}'`)
+    logDebug(pluginJson, `makeTodayProgress() starting with itemsToShowArg '${itemsToShowArg ? itemsToShowArg : '-'}'`)
+    const itemsToShowArr: Array<string> = itemsToShowArg
+      ? itemsToShowArg.split(',')
+      : []
+    logDebug('makeTodayProgress()', `itemsToShowArr '${String(itemsToShowArr)}'`)
 
     if (typeof headingArg === 'string') {
       const _summaryStr: string = await makeTodayProgress(itemsToShowArr, 'command', headingArg)
@@ -58,8 +82,9 @@ export async function todayProgress(itemsToShowArg?: string, headingArg?: string
       const _summaryStr: string = await makeTodayProgress(itemsToShowArr, 'command')
     }
     // NB: don't need to do anything with output
-  } catch (err) {
-    logError('todayProgress', `Error: ${err.message}`)
+  }
+  catch (err) {
+    logError(pluginJson, 'makeTodayProgress() ' + err.message)
     return // for completeness
   }
 }
@@ -70,9 +95,9 @@ export async function todayProgress(itemsToShowArg?: string, headingArg?: string
  * If it's week to date, then use the user's first day of week from NP setting.
  * @author @jgclark
  *
- * @param {?string} itemsToShowArr e.g. ['@calories', '#test']. If not provided, then the default items in setting 'todayProgressItems' will be used instead.
- * @param {?string} source of this call (command/xcb/template). If not provided, then it assumes this is a 'command' call.
- * @param {?string} headingArg (optional)
+ * @param {?string} itemsToShowArr e.g. ['@calories', '#test']
+ * @param {?string} source of this call (command/xcb/template)
+ * @param {?string} headingArg
  * @returns {?string} - either return string to Template, or void to plugin
  */
 export async function makeTodayProgress(itemsToShowArr: Array<string> = [], source: string = 'command', headingArg?: string): Promise<string> {
@@ -86,9 +111,11 @@ export async function makeTodayProgress(itemsToShowArr: Array<string> = [], sour
     const toDateStr = todaysDateISOString
     const periodString = toNPLocaleDateString(new Date())
 
-    const heading = typeof headingArg === 'string' ? headingArg : config.todayProgressHeading // this test means we can pass an empty heading, that can be distinguished from no headingArg
+    const heading = (typeof headingArg === 'string') ? headingArg : config.todayProgressHeading // this test means we can pass an empty heading, that can be distinguished from no headingArg
     logDebug('makeTodayProgress', `Starting with itemsToShowArr '${String(itemsToShowArr)}' for ${fromDateStr} heading '${heading}' from source ${source}`)
-    const itemsToShow: Array<string> = itemsToShowArr.length > 0 ? itemsToShowArr : config.todayProgressItems
+    const itemsToShow: Array<string> = itemsToShowArr.length > 0
+      ? itemsToShowArr
+      : config.todayProgressItems
     logDebug('makeTodayProgress', `itemsToShow: '${String(itemsToShow)}'`)
     logDebug('makeTodayProgress', `heading: '${heading}'`)
     const mentionsToShow = itemsToShow.filter((f) => f.startsWith('@'))
@@ -97,13 +124,15 @@ export async function makeTodayProgress(itemsToShowArr: Array<string> = [], sour
 
     const settingsForGO: OccurrencesToLookFor = {
       GOYesNo: [],
-      GOHashtagsCount: [], // covered in the total
-      GOHashtagsTotal: hashtagsToShow.length > 0 ? hashtagsToShow : [],
-      GOHashtagsAverage: [], // just 1 day so average doesn't make sense
-      GOMentionsCount: [], // covered in the total
-      GOMentionsTotal: mentionsToShow.length > 0 ? mentionsToShow : [],
-      GOMentionsAverage: [], // just 1 day so average doesn't make sense
-      GOChecklistRefNote: '',
+      GOHashtagsCount: [],
+      GOHashtagsTotal: (hashtagsToShow.length > 0) ? hashtagsToShow : [],
+      GOHashtagsAverage: [],
+      GOHashtagsExclude: [],
+      GOMentionsCount: [],
+      GOMentionsTotal: (mentionsToShow.length > 0) ? mentionsToShow : [],
+      GOMentionsAverage: [],
+      GOMentionsExclude: [],
+      GOChecklistRefNote: "",
     }
 
     const startTime = new Date()
@@ -111,7 +140,12 @@ export async function makeTodayProgress(itemsToShowArr: Array<string> = [], sour
     await CommandBar.onAsyncThread()
 
     // Main work: calculate the progress update as an array of strings
-    const tmOccurrencesArray = await gatherOccurrences(periodString, fromDateStr, toDateStr, settingsForGO)
+    const tmOccurrencesArray = await gatherOccurrences(
+      periodString,
+      fromDateStr,
+      toDateStr,
+      settingsForGO
+    )
 
     CommandBar.showLoading(false)
     await CommandBar.onMainThread()
@@ -139,7 +173,9 @@ export async function makeTodayProgress(itemsToShowArr: Array<string> = [], sour
     if (source === 'template') {
       // this was a template command call, so simply return the output text
       logDebug('makeTodayProgress', `-> returning text to template for '${heading}' (for ${periodString})`)
-      return thisHeadingLine !== '' ? `${thisHeadingLine}\n${output}` : output
+      return (thisHeadingLine !== '')
+        ? thisHeadingLine + '\n' + output
+        : output
     }
 
     // Now write to current daily note
@@ -158,8 +194,8 @@ export async function makeTodayProgress(itemsToShowArr: Array<string> = [], sour
       logError('makeTodayProgress', `Cannot find daily note to write to`)
     }
     return ''
-  } catch (err) {
-    logError('makeTodayProgress', `Error: ${err.message}`)
+  } catch (error) {
+    logError('makeTodayProgress', error.message)
     return '<error>' // for completeness
   }
 }

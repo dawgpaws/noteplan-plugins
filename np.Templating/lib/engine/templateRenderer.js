@@ -55,12 +55,11 @@ export function replaceDoubleDashes(templateData: string): string {
   let returnedData = templateData
   // replace double dashes at top with triple dashes
   const lines = templateData.split('\n')
-  const startBlock = lines.findIndex((line) => line.trim() === '--')
-  const endBlock = startBlock === 0 ? lines.findIndex((line, idx) => idx > startBlock && line.trim() === '--') : -1
+  const startBlock = lines.indexOf('--')
+  const endBlock = startBlock === 0 ? lines.indexOf('--', startBlock + 1) : -1
   if (startBlock >= 0 && endBlock > 0) {
-    // Replace -- with --- while preserving any leading/trailing whitespace
-    lines[startBlock] = lines[startBlock].replace(/--/, '---')
-    lines[endBlock] = lines[endBlock].replace(/--/, '---')
+    lines[startBlock] = '---'
+    lines[endBlock] = '---'
     returnedData = lines.join('\n')
   }
   return returnedData
@@ -74,26 +73,20 @@ export function replaceDoubleDashes(templateData: string): string {
  * @returns {string} The template with triple dashes converted to double dashes if needed
  */
 export function convertToDoubleDashesIfNecessary(templateData: string): string {
-  // Only process if template starts with "---" on its own line (no leading spaces, but trailing spaces are ok)
-  // The first line should be ONLY "---" followed by optional spaces, not "--- something else"
-  const lines = templateData.split('\n')
-  if (lines.length === 0 || lines[0].trim() !== '---') {
-    return templateData
-  }
-  // Also verify no leading spaces (should start with "---", not " ---")
-  if (!lines[0].startsWith('---')) {
+  // Only process if template starts with "---\n"
+  if (!templateData.startsWith('---\n')) {
     return templateData
   }
 
   let returnedData = templateData
   // convert first two occurrences of triple dashes to double dashes
+  const lines = templateData.split('\n')
   const startBlock = 0 // We know it starts with "---" since we checked above
-  const endBlock = lines.findIndex((line, idx) => idx > startBlock && line.trim() === '---')
+  const endBlock = lines.indexOf('---', startBlock + 1)
 
   if (endBlock > startBlock) {
-    // Replace --- with -- while preserving any leading/trailing whitespace
-    lines[startBlock] = lines[startBlock].replace(/---/, '--')
-    lines[endBlock] = lines[endBlock].replace(/---/, '--')
+    lines[startBlock] = '--'
+    lines[endBlock] = '--'
     returnedData = lines.join('\n')
     logDebug(pluginJson, `convertToDoubleDashesIfNecessary: converted triple dashes to double dashes; templateData is now: "${templateData}"`)
   }

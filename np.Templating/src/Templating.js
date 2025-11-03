@@ -17,10 +17,10 @@ import { helpInfo } from '../lib/helpers'
 import { getSetting } from '@helpers/NPConfiguration'
 import { smartPrependPara, smartAppendPara } from '@helpers/paragraph'
 import { showMessage } from '@helpers/userInput'
-import { getContentWithLinks } from '@helpers/content'
 
 // helpers
-import { getNotePlanWeather } from '../lib/support/modules/notePlanWeather'
+import { getWeatherSummary } from '../lib/support/modules/weatherSummary'
+import { getWeather } from '../lib/support/modules/weather'
 import { getAffirmation } from '../lib/support/modules/affirmation'
 import { getAdvice } from '../lib/support/modules/advice'
 import { getDailyQuote } from '../lib/support/modules/quote'
@@ -117,10 +117,10 @@ export async function templateInsert(templateName: string = ''): Promise<void> {
           return
         }
         templateNote = Editor.note
-        templateData = getContentWithLinks(Editor.note)
+        templateData = Editor.content
       } else {
         templateNote = await getNote(selectedTemplate, true, `@Templates`)
-        templateData = getContentWithLinks(templateNote)
+        templateData = templateNote?.content || ''
       }
       const { frontmatterBody, frontmatterAttributes } = await NPTemplating.renderFrontmatter(templateData)
 
@@ -130,19 +130,7 @@ export async function templateInsert(templateName: string = ''): Promise<void> {
 
       // $FlowIgnore
       const renderedTemplate = await NPTemplating.render(frontmatterBody, frontmatterAttributes, { frontmatterProcessed: true })
-      logDebug(pluginJson, `templateInsert: renderedTemplate.length: ${renderedTemplate.length} about to insert into Editor at cursor`)
-      // reload the Editor in case any templating code changed the note
-      const oldContent = Editor.content || ''
-      await Editor.openNoteByFilename(Editor.filename)
-      if (Editor.content !== oldContent) {
-        logDebug(
-          pluginJson,
-          `templateInsert: Editor saved on the disk was different. This may be ok if the templating code changed the note underneath and we are reloading the note to get the new content before inserting the rendered template. Editor.content changed from:\nWHAT WAS IN EDITOR:\n${oldContent} to:\nWHAT WAS SAVED AND IS IN EDITOR NOW:\n${
-            Editor.content || ''
-          } so reloading Editor`,
-        )
-        await Editor.openNoteByFilename(Editor.filename)
-      }
+
       Editor.insertTextAtCursor(renderedTemplate)
     } else {
       await CommandBar.prompt('Template', 'You must have a Project Note or Calendar Note opened where you wish to insert template.')
@@ -167,10 +155,10 @@ export async function templateAppend(templateName: string = ''): Promise<void> {
           return
         }
         templateNote = Editor.note
-        templateData = getContentWithLinks(Editor.note)
+        templateData = Editor.content
       } else {
         templateNote = await getNote(selectedTemplate, true, `@Templates`)
-        templateData = getContentWithLinks(templateNote)
+        templateData = templateNote?.content || ''
       }
 
       let { frontmatterBody, frontmatterAttributes } = await NPTemplating.renderFrontmatter(templateData)
@@ -189,23 +177,6 @@ export async function templateAppend(templateName: string = ''): Promise<void> {
       let renderedTemplate = await NPTemplating.render(frontmatterBody, data, { frontmatterProcessed: true })
 
       const location = frontmatterAttributes?.location || 'append'
-      logDebug(
-        pluginJson,
-        `templateAppend: location: ${location} content.length: ${content.length}; about to insert renderedTemplate into Editor at ${location} chars: ${content.length}`,
-      )
-      // reload the Editor in case any templating code changed the note
-      const oldContent = Editor.content || ''
-      await Editor.openNoteByFilename(Editor.filename)
-      if (Editor.content !== oldContent) {
-        logDebug(
-          pluginJson,
-          `templateInsert: Editor saved on the disk was different. This may be ok if the templating code changed the note underneath and we are reloading the note to get the new content before inserting the rendered template. Editor.content changed from:\nWHAT WAS IN EDITOR:\n${oldContent} to:\nWHAT WAS SAVED AND IS IN EDITOR NOW:\n${
-            Editor.content || ''
-          } so reloading Editor`,
-        )
-        await Editor.openNoteByFilename(Editor.filename)
-      }
-
       if (location === 'cursor') {
         Editor.insertTextAtCursor(renderedTemplate)
       } else {
@@ -235,7 +206,7 @@ export async function templateInvoke(templateName?: string): Promise<void> {
       }
       // $FlowIgnore
       const selectedTemplate = selectedTemplateFilename ?? (await NPTemplating.chooseTemplate())
-      const templateData = await NPTemplating.getTemplateContent(selectedTemplate)
+      const templateData = await NPTemplating.getTemplate(selectedTemplate)
       let { frontmatterBody, frontmatterAttributes } = await NPTemplating.renderFrontmatter(templateData)
 
       // Create frontmatter object that includes BOTH the attributes AND the methods
@@ -312,7 +283,7 @@ export async function templateNew(templateTitle: string = '', _folder?: string, 
       logDebug(pluginJson, `templateNew: about to chooseTemplate`)
       selectedTemplate = await NPTemplating.chooseTemplate()
     }
-    const templateData = await NPTemplating.getTemplateContent(selectedTemplate)
+    const templateData = await NPTemplating.getTemplate(selectedTemplate)
     const templateAttributes = await NPTemplating.getTemplateAttributes(templateData)
 
     let folder = _folder ?? ''
@@ -463,7 +434,7 @@ export async function templateQuickNote(templateTitle: string = ''): Promise<voi
     }
 
     if (selectedTemplate) {
-      const templateData = await NPTemplating.getTemplateContent(selectedTemplate)
+      const templateData = await NPTemplating.getTemplate(selectedTemplate)
       const isFrontmatter = new FrontmatterModule().isFrontmatterTemplate(templateData)
       const templateAttributes = await NPTemplating.getTemplateAttributes(templateData)
 
@@ -660,13 +631,12 @@ export async function templateMeetingNote(templateName: string = '', templateDat
           await Editor.openNoteByFilename(filename)
 
           const lines = finalRenderedData.split('\n')
-          const startBlock = lines.findIndex((line) => line.trim() === '--')
-          const endBlock = startBlock === 0 ? lines.findIndex((line, idx) => idx > startBlock && line.trim() === '--') : -1
+          const startBlock = lines.indexOf('--')
+          const endBlock = startBlock === 0 ? lines.indexOf('--', startBlock + 1) : -1
 
           if (startBlock >= 0 && endBlock >= 0) {
-            // Replace -- with --- while preserving any leading/trailing whitespace
-            lines[startBlock] = lines[startBlock].replace(/--/, '---')
-            lines[endBlock] = lines[endBlock].replace(/--/, '---')
+            lines[startBlock] = '---'
+            lines[endBlock] = '---'
             const newContent = lines.join('\n')
             Editor.content = newContent
             logDebug(
@@ -704,8 +674,7 @@ export async function templateWeather(): Promise<string> {
     weatherFormat = weatherFormat.length === 0 && templateConfig?.weatherFormat?.length > 0 ? templateConfig?.weatherFormat : weatherFormat
 
     // $FlowIgnore
-    const resolvedFormat = weatherFormat === undefined || weatherFormat === null || weatherFormat.trim().length === 0 ? undefined : weatherFormat
-    const weather = await getNotePlanWeather(resolvedFormat, null, null, null)
+    const weather = weatherFormat.length === 0 ? await getWeather() : await getWeatherSummary(weatherFormat)
 
     Editor.insertTextAtCursor(weather)
   } catch (error) {
@@ -920,8 +889,8 @@ export async function templateExecute(templateName?: string, userData?: any): Pr
   }
 }
 
-export async function getTemplateContent(templateName: string = '', options: any = { showChoices: true }): Promise<string> {
-  return await NPTemplating.getTemplateContent(templateName, options)
+export async function getTemplate(templateName: string = '', options: any = { showChoices: true }): Promise<string> {
+  return await NPTemplating.getTemplate(templateName, options)
 }
 
 export async function renderFrontmatter(templateData: string = '', userData: any = {}): Promise<any> {

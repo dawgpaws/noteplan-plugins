@@ -40,10 +40,7 @@ export function truncateHTML(htmlIn: string, maxLength: number, dots: boolean = 
   let inMDLink = false
   let truncatedHTML = ''
   let lengthLeft = maxLength
-  let showDots = dots
-
-  // Walk through the htmlIn string a character at a time.
-  // Continue to the end of the string, even if we've run out of length, in order to pick up closing HTML tags.
+  // Walk through the htmlIn string a character at a time
   for (let index = 0; index < htmlIn.length; index++) {
     // if we've started an HTML tag (i.e. has a > later) stop counting
     if (htmlIn[index] === '<' && htmlIn.slice(index).includes('>')) {
@@ -55,7 +52,7 @@ export function truncateHTML(htmlIn: string, maxLength: number, dots: boolean = 
       // logDebug('truncateHTML', `started MD link at ${String(index)}`)
       inMDLink = true
     }
-    // if we're not in a tag or MD link, decrement 'lengthLeft' counter
+    // if we're not in a tag or MD link, count down
     if (!inHTMLTag && !inMDLink) {
       lengthLeft--
     }
@@ -63,11 +60,8 @@ export function truncateHTML(htmlIn: string, maxLength: number, dots: boolean = 
     if (lengthLeft >= 0 || inHTMLTag || inMDLink) {
       truncatedHTML += htmlIn[index]
     }
-    // Add ellipsis if we've just run out of length and we want to show dots
-    if (lengthLeft === 0 && showDots) {
+    if (dots && lengthLeft === 0) {
       truncatedHTML += '…'
-      // Now need to set showDots to false, so we don't add more dots in certain edge cases
-      showDots = false
     }
     if (htmlIn[index] === '>' && inHTMLTag) {
       // Have we closed a tag?

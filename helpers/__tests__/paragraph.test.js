@@ -59,10 +59,6 @@ describe('paragraph.js', () => {
       const result = p.stripAllURIsAndNoteLinks('Something about ![image title](http://www.tennis.org/)')
       expect(result).toEqual('Something about !image title')
     })
-    test('should leave bare domain name', () => {
-      const result = p.stripAllURIsAndNoteLinks('* !!! buy epic passes www.beavercreek.com for family (breakeven at 4 days of skiing) for family (breakeven at 4 days of skiing) @repeat(2/7) ^sleu9a >2025-10-07')
-      expect(result).toEqual('* !!! buy epic passes www.beavercreek.com for family (breakeven at 4 days of skiing) for family (breakeven at 4 days of skiing) @repeat(2/7) ^sleu9a >2025-10-07')
-    })
   })
 
   describe('stripDoneDateTimeMentions()', () => {
@@ -80,7 +76,7 @@ describe('paragraph.js', () => {
     })
   })
 
-  describe('isTermInURL()', () => {
+  describe('termNotInURL()', () => {
     test('should find search term in a URL', () => {
       const result = p.isTermInURL('tennis', 'Something about http://www.tennis.org/')
       expect(result).toEqual(true)

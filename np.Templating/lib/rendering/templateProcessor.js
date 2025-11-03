@@ -16,7 +16,7 @@ import {
   getCodeBlocks,
   getIgnoredCodeBlocks,
   convertTemplateJSBlocksToControlTags,
-  getTemplateContent,
+  getTemplate,
   getNote,
   codeBlockHasComment,
   blockIsJavaScript,
@@ -506,7 +506,7 @@ export async function processIncludeTag(tag: string, context: { templateData: st
   templateName = evaluateTemplateStrings(templateName, context.sessionData)
 
   logDebug(`processIncludeTag templateName: ${templateName}`)
-  const templateContent = await getTemplateContent(templateName, { silent: true })
+  const templateContent = await getTemplate(templateName, { silent: true })
   const hasFrontmatter = new FrontmatterModule().isFrontmatterTemplate(templateContent)
   const isCalendarNote = /^\d{8}|\d{4}-\d{2}-\d{2}$/.test(templateName)
 
@@ -992,10 +992,10 @@ export async function importTemplates(templateData: string = '', sessionData: Ob
         // Evaluate template strings in the template name if they exist
         noteNamePath = evaluateTemplateStrings(noteNamePath, sessionData)
 
-        const content = await getTemplateContent(noteNamePath)
+        const content = await getTemplate(noteNamePath)
         // Ensure content is a string
         if (typeof content !== 'string') {
-          logDebug(pluginJson, `importTemplates: getTemplateContent returned non-string content: ${typeof content} - ${String(content).substring(0, 100)}`)
+          logDebug(pluginJson, `importTemplates: getTemplate returned non-string content: ${typeof content} - ${String(content).substring(0, 100)}`)
           newTemplateData = newTemplateData.replace(tag, `**Error importing "${noteNamePath}": Invalid content type**`)
           continue
         }
@@ -1563,13 +1563,6 @@ async function _renderWithConfig(inputTemplateData: string, userData: any = {}, 
       const enhancedTemplatingEngine = new TemplatingEngine(templateConfig, inputTemplateData, frontmatterErrors)
 
       try {
-        logDebug('================================')
-        logDebug(pluginJson, `_renderWithConfig: Rendering template: "${protectedTemplate}"`)
-        logDebug('--------------------------------')
-        clo(sessionData, `_renderWithConfig: Session data`)
-        logDebug('--------------------------------')
-        clo(userOptions, `_renderWithConfig: User options`)
-        logDebug('================================')
         renderedData = await enhancedTemplatingEngine.renderWithFallback(protectedTemplate, sessionData, userOptions)
       } catch (templateEngineError) {
         logError(pluginJson, `TemplatingEngine.renderWithFallback failed with error:`)
@@ -1607,7 +1600,7 @@ async function _renderWithConfig(inputTemplateData: string, userData: any = {}, 
     if (errorMentioned) {
       logDebug(pluginJson, `_renderWithConfig: Error mentioned in final result:\n*****\n\t${errorMentioned}`)
     }
-    logDebug(`returning finalResult: "${finalResult}"`)
+
     return finalResult
   } catch (error) {
     clo(error, `render found error`)
@@ -1631,10 +1624,7 @@ async function _renderWithConfig(inputTemplateData: string, userData: any = {}, 
  * @returns {Promise<string>} A promise that resolves to the rendered template content
  */
 export async function render(inputTemplateData: string, userData: any = {}, userOptions: any = {}, templateConfig: any = {}): Promise<string> {
-  logDebug(pluginJson, `templateProcessor.render: Starting with inputTemplateData: "${inputTemplateData.substring(0, 100)}..."`)
-  const result = await _renderWithConfig(inputTemplateData, userData, userOptions, templateConfig)
-  logDebug(pluginJson, `templateProcessor.render: Returning result: "${result.substring(0, 100)}..."`)
-  return result
+  return await _renderWithConfig(inputTemplateData, userData, userOptions, templateConfig)
 }
 
 /**
@@ -1647,7 +1637,7 @@ export async function render(inputTemplateData: string, userData: any = {}, user
  */
 export async function renderTemplateByName(templateName: string = '', userData: any = {}, userOptions: any = {}): Promise<string> {
   try {
-    const templateData = await getTemplateContent(templateName)
+    const templateData = await getTemplate(templateName)
     const { frontmatterBody, frontmatterAttributes } = await processFrontmatterTags(templateData)
     const data = { ...frontmatterAttributes, frontmatter: { ...frontmatterAttributes }, ...userData }
     const renderedData = await render(frontmatterBody, data, userOptions)

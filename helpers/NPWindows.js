@@ -5,17 +5,15 @@
 // ----------------------------------------------------------------------------
 
 import { clo, logDebug, logError, logInfo, logWarn } from '@helpers/dev'
-import { usersVersionHas } from '@helpers/NPVersions'
 import { caseInsensitiveMatch, caseInsensitiveStartsWith } from '@helpers/search'
 import { inputIntegerBounded } from '@helpers/userInput'
 
 // ----------------------------------------------------------------------------
-// TYPES
+// CONSTANTS
 
-export type TWindowType = 'Editor' | 'HTMLView' | 'FolderView'
+export type TWindowType = 'Editor' | 'HTMLView'
 
 // ----------------------------------------------------------------------------
-// FUNCTIONS
 
 /**
  * Return string version of Rect's x/y/width/height attributes
@@ -49,106 +47,30 @@ export function logWindowsList(): void {
   logInfo('logWindowsList', outputLines.join('\n'))
 }
 
-/**
- * TEST: me
- * Set the width of the main Editor window (including the main sidebar and all other split windows.)
- * If mainSidebarWidth is provided, then it will also set the width of the main sidebar. Pass 0 to hide the sidebar.
- * @author @jgclark
- * 
- * @param {number?} widthIn - width to set for the main Editor window (including the main sidebar and all other split windows)
- * @param {number?} mainSidebarWidth - width to set for the main sidebar (or 0 to hide it)
- */
-export async function setEditorWidth(widthIn?: number, mainSidebarWidth?: number): Promise<void> {
-  try {
-    if (NotePlan.environment.platform !== 'macOS') {
-      throw new Error(`Platform is ${NotePlan.environment.platform}, so will stop.`)
-    }
-
-    const width = widthIn
-      ? widthIn
-      : await inputIntegerBounded('Set Width for main NP Window', `Width? (300-${String(NotePlan.environment.screenWidth)})`, NotePlan.environment.screenWidth, 300)
-    if (isNaN(width)) {
-      logWarn('setEditorWidth', `User didn't provide a width, so will stop.`)
-      return
-    }
-
-    logDebug('setEditorWidth', `Attempting to set width for main NP Window to ${String(width)}`)
-    if (usersVersionHas('mainSidebarControl') && mainSidebarWidth && !isNaN(mainSidebarWidth)) {
-      if (mainSidebarWidth === 0) {
-        logDebug('setEditorWidth', `- will hide main sidebar`)
-        NotePlan.toggleSidebar(true, false, true)
-      } else {
-        logDebug('setEditorWidth', `- will show main sidebar and set its width to ${String(mainSidebarWidth)}`)
-        NotePlan.toggleSidebar(false, true, true)
-        NotePlan.setSidebarWidth(mainSidebarWidth)
-        logDebug('setEditorWidth', `- now main sidebar width = ${String(mainSidebarWidth)}`)
-      }
-    }
-
-    const mainWindowRect = NotePlan.editors[0].windowRect
-    mainWindowRect.width = width
-    NotePlan.editors[0].windowRect = mainWindowRect
-    logDebug('setEditorWidth', `- now width = ${String(mainWindowRect.width)}`)
-  } catch (error) {
-    logError('setEditorWidth', `'setEditorWidth(): ${error.message}`)
-    return
-  }
-}
-
-/**
- * WARNING: this doesn't seem to work in practice. Only works for the main Editor window, and not for split windows.
- * Set the width of an open Editor split window.
- * @author @jgclark
-
- * @param {number?} editorWinIn - index into open .editors array
- * @param {number?} widthIn - width to set
- */
-export async function setEditorSplitWidth(editorWinIn?: number, widthIn?: number): Promise<void> {
+export async function setEditorSplitWidth(editorWinIn: number, widthIn: number): Promise<void> {
   try {
     const editorWinIndex = editorWinIn
       ? editorWinIn
-      : await inputIntegerBounded('Set Width', `Which open Editor number to set width for? (0-${String(NotePlan.editors.length - 1)})`, NotePlan.editors.length - 1, 0)
+      : await inputIntegerBounded('Set Width', 'Which open Editor number to set width for? (0-${String(NotePlan.editors.length - 1)})', NotePlan.editors.length - 1, 0)
     const editorWin = NotePlan.editors[editorWinIndex]
-    logDebug('setEditorSplitWidth', `- ew#${String(editorWinIndex)} currently Rect: ${rectToString(editorWin.windowRect)}`)
-    const thisWindowRect = getLiveWindowRectFromWin(editorWin)
-    if (!thisWindowRect) {
-      logError('setEditorSplitWidth', `Can't get window rect for editor ${String(editorWinIn)}`)
-      return
-    }
-
+    logDebug('setEditorSplitWidth', '- Rect: '.concat(rectToString(editorWin.windowRect)))
     const width = widthIn
       ? widthIn
-      : await inputIntegerBounded('Set Width', `Width? (300-${String(NotePlan.environment.screenWidth)})`, NotePlan.environment.screenWidth, 300)
-    if (isNaN(width)) {
-      logWarn('setEditorSplitWidth', `User didn't provide a width, so will stop.`)
+      : await inputIntegerBounded('Set Width', 'Width? (300-'.concat(String(NotePlan.environment.screenWidth), ')'), NotePlan.environment.screenWidth, 300)
+    const thisWindowRect = getLiveWindowRectFromWin(editorWin)
+    if (!thisWindowRect) {
+      logError('setEditorSplitWidth', "Can't get window rect for editor ".concat(String(editorWinIn)))
       return
     }
-
     const existingWidth = thisWindowRect.width
-    logDebug('setEditorSplitWidth', `- attempting to set width for ew#${String(editorWinIndex)} from ${String(existingWidth)}px to ${String(width)}px`)
+    logDebug('setEditorSplitWidth', 'Attempting to set width for editor #'.concat(String(editorWinIndex), ' from ').concat(String(existingWidth), ' to ').concat(String(width)))
     thisWindowRect.width = width
     editorWin.windowRect = thisWindowRect
     const newWidth = thisWindowRect.width
-    logDebug('setEditorSplitWidth', `- now width = ${String(newWidth)}px`)
+    logDebug('setEditorSplitWidth', '- now width = '.concat(String(newWidth)))
   } catch (error) {
     logError('setEditorSplitWidth', error.message)
     return
-  }
-}
-
-/**
- * Set the width of all main + split windows to the given width.
- * @param {number} width to set (px)
- * @author @jgclark
- */
-export async function setAllMainAndSplitWindowWidths(width: number): Promise<void> {
-  logDebug('setAllMainAndSplitWindowWidths', `Attempting to set width for all split windows to ${String(width)}px`)
-  for (let i = 0; i < NotePlan.editors.length; i++) {
-    const editor = NotePlan.editors[i]
-    if (editor.windowType !== 'floating') {
-      logDebug('setAllMainAndSplitWindowWidths', `- setting width for split window #${String(i)} to ${String(width)}px`)
-      await setEditorSplitWidth(i, width)
-    }
   }
 }
 
@@ -216,31 +138,13 @@ export function getWindowIdFromCustomId(customId: string): string | false {
 }
 
 /**
- * Is a given HTML window open, based on its customId? 
- * Matches are case-insensitive, and either an exact match or a starts-with-match on the supplied customId.
+ * Is a given HTML window open? Matches are case-insensitive, and either an exact match or a starts-with-match on the supplied customId.
  * @author @jgclark
  * @param {string} customId to look for
  * @returns {boolean}
  */
 export function isHTMLWindowOpen(customId: string): boolean {
   return !!getWindowIdFromCustomId(customId)
-}
-
-/**
- * Is a given note open in a NP Editor window/split, based on its filename?
- * @author @jgclark
- * @param {string} filename to look for
- * @returns {boolean}
- */
-export function isEditorWindowOpen(filename: string): boolean {
-  // Get list of open Editor windows/splits
-  const allEditorWindows = NotePlan.editors
-  for (const thisEditorWindow of allEditorWindows) {
-    if (thisEditorWindow.filename === filename) {
-      return true
-    }
-  }
-  return false
 }
 
 /**
@@ -335,19 +239,14 @@ export function focusHTMLWindowIfAvailable(customId: string): boolean {
 }
 
 /**
- * Opens note in new floating window, if it's not already open in one
- * @param {string} filename to open in window
+ * Opens note in new window, if it's not already open in one
+ * @param {string} filename to open in split
  * @returns {boolean} success?
  */
 export async function openNoteInNewWindowIfNeeded(filename: string): Promise<boolean> {
-  const isAlreadyOpen = isEditorWindowOpen(filename)
-  if (isAlreadyOpen) {
-    logDebug('openNoteInNewWindowIfNeeded', `Note '${filename}' is already open in an Editor window. Skipping.`)
-    return false
-  }
-  const res = await Editor.openNoteByFilename(filename, true, 0, 0, false, false) // create new floating window
+  const res = await Editor.openNoteByFilename(filename, true, 0, 0, false, true) // create new floating (and the note if needed)
   if (res) {
-    logDebug('openWindowSet', `Opened floating window '${filename}'`)
+    logDebug('openWindowSet', `Opened floating window pane '${filename}'`)
   } else {
     logWarn('openWindowSet', `Failed to open floating window '${filename}'`)
   }
@@ -355,33 +254,12 @@ export async function openNoteInNewWindowIfNeeded(filename: string): Promise<boo
 }
 
 /**
- * Opens note in new split window, if it's not already open in one
- * @param {string} filename to open in split
- * @returns {boolean} success?
- */
-export async function openNoteInNewSplitIfNeeded(filename: string): Promise<boolean> {
-  const isAlreadyOpen = isEditorWindowOpen(filename)
-  if (isAlreadyOpen) {
-    logDebug('openNoteInNewSplitIfNeeded', `Note '${filename}' is already open in an Editor window. Skipping.`)
-    return false
-  }
-  const res = await Editor.openNoteByFilename(filename, false, 0, 0, true, false) // create new split window
-  if (res) {
-    logDebug('openWindowSet', `Opened split window '${filename}'`)
-  } else {
-    logWarn('openWindowSet', `Failed to open split window '${filename}'`)
-  }
-  return !!res
-}
-
-/**
  * Open a calendar note in a split editor, and (optionally) move insertion point to 'cursorPointIn'
  * @author @jgclark
- * @param {string} filename
- * @param {string | number} cursorPointIn
+ * @param {*} filename
+ * @param {*} cursorPointIn
  */
 export async function openCalendarNoteInSplit(filename: string, cursorPointIn?: string | number = 0): Promise<void> {
-  logDebug('openCalendarNoteInSplit', `Opening calendar note '${filename}' in split at cursor point ${cursorPointIn}`)
   // For some reason need to add a bit to get to the right place.
   const cursorPoint = (typeof cursorPointIn === 'string') ? parseInt(cursorPointIn) + 21 : cursorPointIn + 21
   const res = Editor.openNoteByDateString(filename.split('.')[0], false, cursorPoint, cursorPoint, true)
@@ -389,6 +267,21 @@ export async function openCalendarNoteInSplit(filename: string, cursorPointIn?: 
     // Make sure it all fits on the screen
     await constrainMainWindow()
   }
+}
+
+/**
+ * Opens note in new split, if it's not already open in one
+ * @param {string} filename to open in split
+ * @returns {boolean} success?
+ */
+export async function openNoteInNewSplitIfNeeded(filename: string): Promise<boolean> {
+  const res = await Editor.openNoteByFilename(filename, false, 0, 0, true, true) // create new split (and the note if needed) // TODO(@EduardMe): this doesn't create an empty note if needed for Calendar notes
+  if (res) {
+    logDebug('openWindowSet', `Opened split window '${filename}'`)
+  } else {
+    logWarn('openWindowSet', `Failed to open split window '${filename}'`)
+  }
+  return !!res
 }
 
 export function getWindowFromId(windowId: string): TEditor | HTMLView | false {
@@ -698,46 +591,4 @@ export async function constrainMainWindow(): Promise<void> {
     logError('constrainMainWindow', err.message)
     return
   }
-}
-
-export function logSidebarWidth(): void {
-  if (usersVersionHas('mainSidebarControl')) {
-    const sidebarWidth = NotePlan.getSidebarWidth()
-    logInfo('logSidebarWidth', `Sidebar width: ${sidebarWidth} -- WARNING: This cannot tell if the sidebar is actually visible or not!`)
-  } else {
-    logWarn('logSidebarWidth', `Cannot get Sidebar width before NP v3.19.2`)
-  }
-}
-
-// eslint-disable-next-line require-await
-export async function setSidebarWidth(widthIn?: number): Promise<void> {
-  if (usersVersionHas('mainSidebarControl')) {
-    const width = widthIn ?? await inputIntegerBounded('Set Width for main NP Window', `Width (pixels)? (up to ${String(NotePlan.environment.screenWidth)})`, NotePlan.environment.screenWidth)
-    NotePlan.setSidebarWidth(width)
-    logDebug('setSidebarWidth', `Sidebar width set to ${width}`)
-  } else {
-    logWarn('setSidebarWidth', `Cannot Sidebar width before NP v3.19.2`)
-  }
-}
-
-export function toggleSidebar(): void {
-  NotePlan.toggleSidebar(false, false, true)
-}
-
-/**
- * Open the sidebar, and optionally set its width
- * Note: Available from v3.19.2 (macOS only).
- * @author @jgclark
- * 
- * @param {number?} widthIn - width to set for the sidebar (pixels)
- */
-export function openSidebar(widthIn?: number): void {
-  NotePlan.toggleSidebar(false, true, true)
-  if (widthIn && !isNaN(widthIn)) {
-    NotePlan.setSidebarWidth(widthIn)
-  }
-}
-
-export function closeSidebar(): void {
-  NotePlan.toggleSidebar(true, false, true)
 }

@@ -10,12 +10,14 @@ import { getOpenItemParasForTimePeriod, getDashboardSettings } from './dashboard
 import { type MessageDataObject, type TBridgeClickHandlerResult } from './types'
 import { clo, JSP, logDebug, logError, logInfo, logWarn, logTimer } from '@helpers/dev'
 import {
+  calcOffsetDateStr,
   getNPWeekStr,
   replaceArrowDatesInString,
 } from '@helpers/dateTime'
 import { getGlobalSharedData, sendToHTMLWindow } from '@helpers/HTMLView'
-import { calcOffsetDateStr } from '@helpers/NPdateTime'
-import { moveItemBetweenCalendarNotes } from '@helpers/NPMoveItems'
+import {
+  moveItemBetweenCalendarNotes,
+} from '@helpers/NPMoveItems'
 import { getParagraphFromStaticObject } from '@helpers/NPParagraph'
 import { showMessageYesNo } from '@helpers/userInput'
 
@@ -32,7 +34,7 @@ const checkThreshold = 20 // number beyond which to check with user whether to p
  * @param {MessageDataObject} data
  * @returns {TBridgeClickHandlerResult}
  */
-export async function scheduleAllThisWeekNextWeek(data: MessageDataObject, moveOnlyShown: boolean = false): Promise<TBridgeClickHandlerResult> {
+export async function scheduleAllThisWeekNextWeek(data: MessageDataObject): Promise<TBridgeClickHandlerResult> {
   try {
     let numberScheduled = 0
     const config = await getDashboardSettings()
@@ -43,7 +45,6 @@ export async function scheduleAllThisWeekNextWeek(data: MessageDataObject, moveO
     // If called with modifierKey 'meta', then toggle from usual config.rescheduleNotMove behaviour to the opposite
     const rescheduleNotMove = data.modifierKey === 'meta' ? !config.rescheduleNotMove : config.rescheduleNotMove
     if (config.rescheduleNotMove !== rescheduleNotMove) logDebug('scheduleAllThisWeekNextWeek', `starting with rescheduleNotMove setting overridden toggled to ${String(rescheduleNotMove)}`)
-    if (moveOnlyShown) logDebug('scheduleAllThisWeekNextWeek', `starting with moveOnlyShown TRUE`)
 
     // Get paras for all open items in yesterday's note
     const thisWeekDateStr = getNPWeekStr(today)
@@ -65,31 +66,11 @@ export async function scheduleAllThisWeekNextWeek(data: MessageDataObject, moveO
     // First, override one config item so we can work on separate dated vs scheduled items
     config.separateSectionForReferencedNotes = true
     const [combinedSortedParas, sortedRefParas] = await getOpenItemParasForTimePeriod(thisWeekNote.filename, 'week', config)
+    const initialTotalToMove = combinedSortedParas.length + sortedRefParas.length
 
-    // If actionType ends with 'OnlyShown', filter to only items with priority >= currentMaxPriorityFromAllVisibleSections
-    // TEST:
-    let combinedParasToMove = [...combinedSortedParas]
-    let refParasToMove = [...sortedRefParas]
-    if (moveOnlyShown && reactWindowData?.pluginData?.currentMaxPriorityFromAllVisibleSections !== undefined) {
-      const currentMaxPriority = reactWindowData.pluginData.currentMaxPriorityFromAllVisibleSections
-      if (currentMaxPriority >= 0) {
-        combinedParasToMove = combinedSortedParas.filter((dp) => {
-          const priority = dp.priority ?? 0
-          return priority >= currentMaxPriority
-        })
-        refParasToMove = sortedRefParas.filter((dp) => {
-          const priority = dp.priority ?? 0
-          return priority >= currentMaxPriority
-        })
-        logDebug('scheduleAllThisWeekNextWeek', `Filtering to only shown items: ${combinedParasToMove.length} direct items and ${refParasToMove.length} referenced items (priority >= ${currentMaxPriority})`)
-      }
-    }
-
-    const initialTotalToMove = combinedParasToMove.length + refParasToMove.length
-
-    // Remove child items from the lists
-    const combinedSortedParasWithoutChildren = combinedParasToMove.filter((dp) => !dp.isAChild)
-    const sortedRefParasWithoutChildren = refParasToMove.filter((dp) => !dp.isAChild)
+    // Remove child items from the two lists of paras
+    const combinedSortedParasWithoutChildren = combinedSortedParas.filter((dp) => !dp.isAChild)
+    const sortedRefParasWithoutChildren = sortedRefParas.filter((dp) => !dp.isAChild)
     const totalToMove = combinedSortedParasWithoutChildren.length + sortedRefParasWithoutChildren.length
     if (totalToMove !== initialTotalToMove) {
       logDebug('scheduleAllThisWeekNextWeek', `- Excluding children reduced total to move from ${initialTotalToMove} to ${totalToMove}`)
@@ -200,7 +181,7 @@ export async function scheduleAllThisWeekNextWeek(data: MessageDataObject, moveO
  * @param {MessageDataObject} data
  * @returns {TBridgeClickHandlerResult}
  */
-export async function scheduleAllLastWeekThisWeek(data: MessageDataObject, moveOnlyShown: boolean = false): Promise<TBridgeClickHandlerResult> {
+export async function scheduleAllLastWeekThisWeek(data: MessageDataObject): Promise<TBridgeClickHandlerResult> {
   try {
     let numberScheduled = 0
     const config = await getDashboardSettings()
@@ -211,7 +192,6 @@ export async function scheduleAllLastWeekThisWeek(data: MessageDataObject, moveO
     // If called with modifierKey 'meta', then toggle from usual config.rescheduleNotMove behaviour to the opposite
     const rescheduleNotMove = data.modifierKey === 'meta' ? !config.rescheduleNotMove : config.rescheduleNotMove
     if (config.rescheduleNotMove !== rescheduleNotMove) logDebug('scheduleAllLastWeekThisWeek', `starting with rescheduleNotMove setting overridden toggled to ${String(rescheduleNotMove)}`)
-    if (moveOnlyShown) logDebug('scheduleAllLastWeekThisWeek', `starting with moveOnlyShown TRUE`)
 
     // Get paras for all open items in yesterday's note
     const thisWeekDateStr = getNPWeekStr(today)
@@ -232,30 +212,10 @@ export async function scheduleAllLastWeekThisWeek(data: MessageDataObject, moveO
     // First, override one config item so we can work on separate dated vs scheduled items
     config.separateSectionForReferencedNotes = true
     const [combinedSortedParas, sortedRefParas] = await getOpenItemParasForTimePeriod(lastWeekNote.filename, 'week', config)
-
-    // If actionType ends with 'OnlyShown', filter to only items with priority >= currentMaxPriorityFromAllVisibleSections
-    let combinedParasToMove = [...combinedSortedParas]
-    let refParasToMove = [...sortedRefParas]
-    if (moveOnlyShown && reactWindowData?.pluginData?.currentMaxPriorityFromAllVisibleSections !== undefined) {
-      const currentMaxPriority = reactWindowData.pluginData.currentMaxPriorityFromAllVisibleSections
-      if (currentMaxPriority >= 0) {
-        combinedParasToMove = combinedSortedParas.filter((dp) => {
-          const priority = dp.priority ?? 0
-          return priority >= currentMaxPriority
-        })
-        refParasToMove = sortedRefParas.filter((dp) => {
-          const priority = dp.priority ?? 0
-          return priority >= currentMaxPriority
-        })
-        logDebug('scheduleAllLastWeekThisWeek', `Filtering to only shown items: ${combinedParasToMove.length} direct items and ${refParasToMove.length} referenced items (priority >= ${currentMaxPriority})`)
-      }
-    }
-
-    const initialTotalToMove = combinedParasToMove.length + refParasToMove.length
-
-    // Remove child items from the lists
-    const combinedSortedParasWithoutChildren = combinedParasToMove.filter((dp) => !dp.isAChild)
-    const sortedRefParasWithoutChildren = refParasToMove.filter((dp) => !dp.isAChild)
+    const initialTotalToMove = combinedSortedParas.length + sortedRefParas.length
+    // Remove child items from the two lists of paras
+    const combinedSortedParasWithoutChildren = combinedSortedParas.filter((dp) => !dp.isAChild)
+    const sortedRefParasWithoutChildren = sortedRefParas.filter((dp) => !dp.isAChild)
     const totalToMove = combinedSortedParasWithoutChildren.length + sortedRefParasWithoutChildren.length
     if (totalToMove !== initialTotalToMove) {
       logDebug('scheduleAllLastWeekThisWeek', `- Excluding children reduced total to move from ${initialTotalToMove} to ${totalToMove}`)

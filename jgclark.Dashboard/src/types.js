@@ -1,7 +1,7 @@
 // @flow
 //-----------------------------------------------------------------------------
 // Types for Dashboard code
-// Last updated 2025-11-11 for v2.3.0.b13, @jgclark
+// Last updated 2025-09-04 for v2.3.0.b10, @jgclark
 //-----------------------------------------------------------------------------
 // Types for Settings
 
@@ -72,7 +72,6 @@ export type TDashboardSettings = {
   excludedFolders: string, // Note: Run through stringListOrArrayToArray() before use
   excludeTasksWithTimeblocks: boolean,
   filterPriorityItems: boolean, // also kept in a DataStore.preference key
-  moveOnlyShownItemsWhenFiltered: boolean, // from v2.3.0
   hideDuplicates: boolean,
   hidePriorityMarkers: boolean,
   ignoreChecklistItems: boolean,
@@ -214,7 +213,7 @@ export type TActionButton = {
   display: string,
   actionPluginID: string,
   actionName: TActionType,
-  actionParam: string /* NB: all have to be passed as a string for simplicity. For "move all" buttons when filtering is active, may contain '|onlyShown' suffix */,
+  actionParam: string /* NB: all have to be passed as a string for simplicity */,
   postActionRefresh?: Array<TSectionCode>,
   tooltip: string,
   formFields?: Array<TSettingItem>,
@@ -245,10 +244,6 @@ export type TActionType =
   | 'moveAllThisWeekNextWeek'
   | 'moveAllTodayToTomorrow'
   | 'moveAllYesterdayToToday'
-  | 'moveOnlyShownLastWeekThisWeek' // from v2.3.0
-  | 'moveOnlyShownThisWeekNextWeek' // from v2.3.0
-  | 'moveOnlyShownTodayToTomorrow' // from v2.3.0
-  | 'moveOnlyShownYesterdayToToday' // from v2.3.0
   | 'moveFromCalToCal'
   | 'moveToNote'
   | 'onClickDashboardItem'
@@ -257,15 +252,17 @@ export type TActionType =
   | 'refreshSomeSections'
   | 'reviewFinished'
   | 'scheduleAllOverdueToday'
-  | 'scheduleOnlyShownOverdueToday' // from v2.3.0
   | 'setNewReviewInterval'
   | 'setNextReviewDate'
   | 'showNoteInEditorFromFilename'
   | 'showNoteInEditorFromTitle'
   | 'showLineInEditorFromFilename'
   | 'showLineInEditorFromTitle'
+  // | 'setSpecificDate'
   | 'startReviews'
   | 'startSearch'
+  | '(not yet set)'
+  // | 'turnOffPriorityItemsFilter'
   | 'toggleType'
   | 'togglePauseProject'
   | 'unknown'
@@ -283,7 +280,6 @@ export type TActionType =
   | 'evaluateString'
   | 'windowReload' // Used by 'Hard Refresh' button for devs
   | 'windowResized'
-  | '(not yet set)'
 
 export type TControlString =
   | 't'

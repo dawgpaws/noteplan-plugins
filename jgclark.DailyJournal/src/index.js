@@ -3,19 +3,21 @@
 //---------------------------------------------------------------
 // Journalling commands
 // Jonathan Clark
-// last update 2025-10-10 for v1.15.0 by @jgclark
+// Last updated 16.6.23 for v0.15.1 by @jgclark
 //---------------------------------------------------------------
 
 // allow changes in plugin.json to trigger recompilation
 import pluginJson from '../plugin.json'
-import { renameKeys } from '@helpers/dataManipulation'
-import { clo, compareObjects, JSP, logDebug, logInfo, logError } from "@helpers/dev"
-import { backupSettings, pluginUpdated, saveSettings } from '@helpers/NPConfiguration'
+import { JSP, logDebug, logInfo, logError } from "@helpers/dev"
+import { pluginUpdated, updateSettingData } from '@helpers/NPConfiguration'
 import { editSettings } from '@helpers/NPSettings'
-
-const pluginID = 'jgclark.DailyJournal'
+import { showMessage } from '@helpers/userInput'
 
 export {
+  dayStart,
+  todayStart,
+  weekStart,
+  monthStart,
   dailyJournalQuestions,
   weeklyJournalQuestions,
   monthlyJournalQuestions,
@@ -23,62 +25,46 @@ export {
   yearlyJournalQuestions,
 } from './journal'
 
-export {
-  dayStart,
-  dayEnd,
-  todayStart,
-  todayEnd,
-  weekStart,
-  weekEnd,
-  monthStart,
-} from './templatesStartEnd'
-
 export function init(): void {
   try {
     // Check for the latest version of the plugin, and if a minor update is available, install it and show a message
-    DataStore.installOrUpdatePluginsByID([pluginJson['plugin.id']], true, false, false)
+    DataStore.installOrUpdatePluginsByID([pluginJson['plugin.id']], false, false, false).then((r) =>
+      pluginUpdated(pluginJson, r),
+    )
   } catch (error) {
-    logError(pluginJson, `init: ${JSP(error)}`)
+    logError(pluginJson, JSP(error))
   }
 }
 
-export async function onSettingsUpdated(): Promise<void> {
+export function onSettingsUpdated(): void {
   // Placeholder only to stop error in logs
 }
 
-export async function onUpdateOrInstall(): Promise<void> {
-  try {
-    logDebug(pluginJson, `onUpdateOrInstall() ...`)
-    const initialSettings = (await DataStore.loadJSON(`../${pluginID}/settings.json`)) || DataStore.settings
+const pluginID = 'jgclark.DailyJournal'
 
-    // Migrate any necessary settings from v0.15 to v1.x
-    // TODO(later): remove when all users have updated to v1.x
-    await backupSettings(pluginID, `before_onUpdateOrInstall-v${pluginJson['plugin.version']}`)
-    const keysToChange = {
-      // oldKey: newKey
-      templateTitle: 'startDailyTemplateTitle',
-      weeklyTemplateTitle: 'startWeeklyTemplateTitle',
-      monthlyTemplateTitle: 'startMonthlyTemplateTitle',
-      reviewQuestions: 'dailyReviewQuestions',
-    }
-    const migratedSettings = renameKeys(initialSettings, keysToChange)
-    const diff = compareObjects(migratedSettings, initialSettings, [], true)
-    if (diff != null) {
-      // Save the settings back to the DataStore
-      logInfo(`onUpdateOrInstall`, `- changes to settings detected`)
-      clo(initialSettings, `onUpdateOrInstall:  initialSettings:`)
-      clo(migratedSettings, `onUpdateOrInstall:  migratedSettings:`)
-      await saveSettings(pluginID, migratedSettings)
-    } else {
-      logDebug(`onUpdateOrInstall`, `- no changes detected to settings.`)
+// test the update mechanism, including display to user
+export function testUpdate(): void {
+  onUpdateOrInstall(true) // force update mechanism to fire
+}
+
+export async function onUpdateOrInstall(testUpdate: boolean = false): Promise<void> {
+  try {
+    logInfo(pluginID, `onUpdateOrInstall ...`)
+    let updateSettingsResult = updateSettingData(pluginJson)
+    logInfo(pluginID, `- updateSettingData code: ${updateSettingsResult}`)
+
+    if (testUpdate) {
+      updateSettingsResult = 1 // updated
+      logDebug(pluginID, '- forcing pluginUpdated() to run ...')
     }
 
     // Tell user the plugin has been updated
-    logInfo(pluginID, `- finished`)
-    await pluginUpdated(pluginJson, { code: 2, message: `Plugin Installed or Updated.` })
+    await pluginUpdated(pluginJson, { code: updateSettingsResult, message: 'unused?' })
+
   } catch (error) {
-    logError(pluginID, `onUpdateOrInstall: ${JSP(error)}`)
+    logError(pluginID, error.message)
   }
+  logInfo(pluginID, `- finished`)
 }
 
 /**

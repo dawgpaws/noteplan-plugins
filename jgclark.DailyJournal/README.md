@@ -1,90 +1,76 @@
-# 💭 Journalling Helpers Plugin
-This plugin gives support for journalling in NotePlan, including making it easier to apply start-of-day Templates, and end-of-day/week Reviews, Summaries or Tidy Up.
+# 💭 Journalling plugin
+This plugin helps you write daily, weekly, monthly, quarterly and/or yearly **journals**, by prompting you for review questions that you set in advance. It also speeds up applying a pre-set daily template each day.
 
-### Configuration
-To use this plugin on weekly/monthly/quarterly/yearly notes, you first need to have them turned on in **NotePlan Settings** > Calendar pane:
+This takes advantage of each of these time periods that can be turned on in Preferences > Calendars, and then show in the sidebar:
 
-<img src="calendar-settings@2x.png" width="600px"/>
+<img width="500px" src="calendar-notes@2x.jpg" />
 
-All the available commands require some **configuration** first. On Mac click the gear button on the 'Journalling' line in the Plugin Preferences panel, and fill in the settings according to which of the following commands you want to use.  If you only use iPhone or iPad, you'll need to use the separate **/Journalling: update plugin settings** command instead.
+The commands are:
+- **/dayStart**: Apply your 'Daily Note' Template to the currently open daily note (or today's note if you're not editing a daily note)
+- **/todayStart**: Apply your 'Daily Note' Template to today's calendar note
+- **/weekStart**: Apply your 'Weekly Note' Template to the currently open weekly note (or the current weekly note if you're not editing a weekly note)
+- **/monthStart**: Apply your 'Monthly Note' Template to the currently open monthly note (or the current monthly note if you're not editing a monthly note)
+- **/dayReview**: Ask journal questions for an end-of-day review, and write answers in the current daily note. See below for details and examples.
+- **/weekReview**, **/monthReview**, **/quarterReview** and **/yearReview** all work similarly, asking the appropriately-configured journal questions, and write answers in the currently-open week/month/quarter/year note for that period, or if one of those isn't open, then offers to open the current note for that period.
+- **/Journalling: update plugin settings**: This command allows the plugin's settings to be changed on iOS/iPadOS.
 
-## Quickly applying Templates at the start of each Day/Week
-The NotePlan website has good [articles on getting started with Templates](https://help.noteplan.co/article/136-templates), and a helpful [Template Gallery](https://noteplan.co/templates), to build from.
+Note: the monthly/quarterly/yearly commands only work fully from NotePlan release 3.7.2.
 
-For more details of the tag commands you can use in a Template, including a list of events, a quote-of-the-day or summary weather forecast, see the [full Templating Documentation](https://noteplan.co/templates/docs).
+## Configuration
+Click the gear button on the 'Journalling' line in the Plugin Preferences panel, and fill in the settings accordingly. Defaults are given for each one, to give you some ideas.
 
-### /dayStart & /todayStart commands
-These commands make it quicker to apply a Template at the start or end of a day or week. The names of the Templates to use are set in the Plugin Settings pane, referring to Template names stored in the special NotePlan `Templates` folder.  (This command has become less necessary since about NotePlan v3.17, which introduced [auto-inserting of templates into new calendar notes](https://help.noteplan.co/article/229-auto-insert-templates).)
+### /dayStart and /todayStart
+These commands require the separate [Templating plugin](https://github.com/NotePlan/plugins/tree/main/np.Templating/) to be installed.
 
-- **/todayStart**: applies your 'Daily Note' Template only to _today's_ calendar note, no matter what note you're editing.
-- **/dayStart** appends your 'Daily Note' Template to the _currently open daily note_ (or today's note if you're not editing a daily note). Therefore, be careful using it on another calendar note than today using template tag commands like `<%- date... / formattedDate... %>` or `<%- weather() %>` -> because this renders the TODAY content!
+They then use your pre-set Template name stored in the special NotePlan `Templates` folder. By default this is set to `Daily Note Template`.
 
-### /weekStart command
-This acts very similarly to the /dayStart command above.
+The NotePlan website has good [articles on getting started with Templates](https://help.noteplan.co/article/136-templates). For more details of the tag commands you can use in a Template, including a list of events, a quote-of-the-day or summary weather forecast, see the [Templating Getting Started](https://noteplan.co/templates/docsdocs/templating-basics/getting-started).
 
-### /dayEnd, /todayEnd, /weekEnd commands
-These act in the same way as above, but can be tailored to adding items at the end of a day, perhaps like a Habit or Stats summary from the separate [**Habits & Summaries plugin**](https://noteplan.co/plugins/jgclark.Summaries).
+NB: Be careful with `/dayStart` in another calendar note than today using template tag commands like `<%- date... / formattedDate... %>` or `<%- weather() %>` -> because this renders the TODAY content!
 
-This is also a quick way of regularly running one or more commands from the separate [**Tidy Up plugin**](https://noteplan.co/plugins/np.Tidy).
+### /dayReview, /weekReview, /monthReview, /quarterReview, and /yearReview
+You first need to configure the sets of questions to ask, though a default set is provided to get you started.
 
-## Helping with periodic Reviews
-There's no right or wrong way to do reviews, and you'll no doubt change what you find helpful over time. But the key is to be taking some time to answer questions to help you pause and review what has and hasn't gone well over the last day/week/month/quarter. Some use it as a way of capturing their main **emotions**; others to track **goals**; others to write a simple **gratitude** journal.
-
-### Using Templates you fill in
-One way to do this is to configure an end-of-day/week Template -- for example this [Mental Health Journal](https://noteplan.co/templates/mental-health-journal-template) -- which you then apply to your current note using the /dayEnd or /weekEnd command, and then fill in your responses.
-
-### Interactively
-Alternatively, the **/dayReview**, **/weekReview**, **/monthReview**, **/quarterReview**, and/or **/yearReview** commands present you with a set of questions interactively. You first need to configure the sets of questions to ask in the plugin settings. In each case a default set of questions is provided to get you started.  Each setting is explained:
+Each setting is explained:
 
 #### Journal Section Heading
 The name of an existing markdown heading after which the review answers are added. If it doesn't exist, it is added at the end of the note.
 
-#### Daily / Weekly / Monthly / Quarterly / Year Journal Questions
-This string includes both the questions and how to lay out the answers in the note. There are several possible question types:
-- `<boolean>` shows the text as a question, and if you answer "Yes" to the question, the text is included. If you answer "No" it isn't included.
-- `<int>` asks for an integer number
-- `<number>` asks for a number (which may include fractional part)
+#### Daily Journal Questions
+This string includes both the questions and how to lay out the answers in the daily note. There are several possible question types:
+- `<int>` asks for a integer number
+- `<number>` asks for a (floating point) number
 - `<string>` asks for a string
+- You can also add bulletpoints with an identifier e.g. `-(thoughts) <string>` where the identifier doesn't get rendered. (The purpose of the identifier is to see on which question the user currently is, otherwise one would only have a lot of `-`.)
 - `<mood>`select one of the configured moods
-- `<done>` will include the rest of the text in the line and will be included in the output if you answer "Yes" to the "Yes"/"No" question about it
-- `<subheading>` includes the given string as `### Subheading`.
+- `<subheading>` asks for a subheading (which gets rendered as `### Subheading`) not a question as such.
 
 Other notes:
 - You can includes line breaks ('new lines') with `\n` characters.
-- You can have multiple questions on a line by separating them with `||` (with or without extra spaces) in the settings string. The answers will also be placed on the one line, but with the `||` removed, and with a space separating them.
-- You can hide the question text by starting it with a dash e.g. `-(thoughts) <string>`. This will just output the entered text. (The identifier is there to work out which question the user currently is on.) ???
 - If a particular question isn't answered (i.e. no input entered), then that question isn't included in the output.
-- If a particular question has already been answered in the note (i.e. if a line starts with the same question text), it won't be asked again.
+- If a particular question has already been answered in the note, it won't be asked again, or over-ridden.
+
+#### Weekly / Monthly / Quarterly / Year Journal Questions
+These strings include both the questions and how to lay out the answers in the weekly note.  The details are as for Daily Journal Questions, above.
 
 #### Moods
 A comma-separated list of possible moods to select from.  They don't have to have emoji, but I rather like them.
 
-### Example for /dayReview
+## /dayReview Example
 The following `reviewQuestions` string:
 ```
-@sleep(<number>) || @work(<int>)
-@fruitveg(<int>) || #stretches<boolean> || #closedRings<boolean>
-Mood: <mood>
-
-Significant Thoughts <subheading>
-- (Thought 1/3) <string>
-- (Thought 2/3) <string>
-- (Thought 3/3) <string>
-
-Gratitude <subheading>
-- (Gratitude 1/3) <string>
-- (Gratitude 2/3) <string>
-- (Gratitude 3/3) <string>
+@work(<int>)\n@fruitveg(<int>)\nMood: <mood>\nThoughts <subheading>\n- (Thought 1/3) <string>\n- (Thought 2/3) <string>\n
+- (Thought 3/3) <string>\nGratitude <subheading>\n- (Gratitude 1/3) <string>\n- (Gratitude 2/3) <string>\n- (Gratitude 3/3) <string>\n
 ```
-after answering the questions, would produce something like this in today's note:
+would produce, after answering the questions, like this in today's note:
 
 ```markdown
 ## Journal
-@sleep(6.8) @work(7)
-@fruitveg(4) #stretches
+@work(7)
+@fruitveg(4)
 Mood: 😇 Blessed
 
-### Significant Thoughts
+### Thoughts
 - Entered thought 1
 - Another thought
 
@@ -96,7 +82,7 @@ Mood: 😇 Blessed
 Tip: you can also avoid answering like in Thought 3/3 - then there is also no bullet point in the final note.
 
 ## Support
-If you find an issue with this plugin, or would like to suggest new features for it, please raise a [Bug or Feature 'Issue' in GitHub](https://github.com/NotePlan/plugins/issues).
+If you find an issue with this plugin, or would like to suggest new features for it, please raise a [Bug or Feature 'Issue'](https://github.com/NotePlan/plugins/issues).
 
 If you would like to support my late-night work extending NotePlan through writing these plugins, you can through:
 
@@ -105,4 +91,4 @@ If you would like to support my late-night work extending NotePlan through writi
 Thanks!
 
 ## History
-Please see the [CHANGELOG](https://github.com/NotePlan/plugins/blob/main/jgclark.DailyJournal/CHANGELOG.md).
+Please see the [CHANGELOG](CHANGELOG.md).

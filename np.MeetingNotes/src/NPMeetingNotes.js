@@ -4,7 +4,7 @@ const scriptLoad = new Date()
 
 import moment from 'moment-business-days'
 
-import { getTemplateContent } from '../../np.Templating/lib/core'
+import { getTemplate } from '../../np.Templating/lib/core'
 import pluginJson from '../plugin.json'
 import { showMessage, chooseFolder, chooseOption, showMessageYesNo } from '../../helpers/userInput'
 import { getNoteByFilename } from '../../helpers/note'
@@ -13,7 +13,6 @@ import { log, logDebug, logError, clo, JSP, timer } from '@helpers/dev'
 import { findProjectNoteUrlInText } from '@helpers/urls'
 import { getAttributes, getNoteTitleFromTemplate, getNoteTitleFromRenderedContent } from '@helpers/NPFrontMatter'
 import { checkAndProcessFolderAndNewNoteTitle } from '@helpers/editor'
-import { getContentWithLinks } from '@helpers/content'
 
 /**
  * Insert a template into a daily note or the current editor.
@@ -36,13 +35,13 @@ export async function insertNoteTemplate(origFileName: string, dailyNoteDate: Da
 
   logDebug(pluginJson, 'get content of template for rendering')
   const templateNote = DataStore.projectNoteByFilename(templateFilename)
-  let templateContent = getContentWithLinks(templateNote)
+  let templateContent = templateNote?.content
 
   if (!templateContent) {
     logError(pluginJson, `couldnt load content of template "${templateFilename}"`)
-    templateContent = await getTemplateContent(templateFilename)
+    templateContent = await getTemplate(templateFilename)
     //
-    // templateContent = await DataStore.invokePluginCommandByName('getTemplateContent', 'np.Templating', [templateFilename])
+    // templateContent = await DataStore.invokePluginCommandByName('getTemplate', 'np.Templating', [templateFilename])
     return
   }
 
@@ -192,7 +191,7 @@ async function renderTemplateForEvent(selectedEvent, templateFilename): Object {
     templateVariables = generateEventData(selectedEvent)
   }
   if (templateFilename) {
-    templateContent = getContentWithLinks(DataStore.projectNoteByFilename(templateFilename))
+    templateContent = DataStore.projectNoteByFilename(templateFilename)?.content || ''
   }
   logDebug(
     pluginJson,
@@ -658,7 +657,7 @@ async function chooseTemplateIfNeeded(templateFilename?: string, onlyMeetingNote
       const templates = []
       for (const template of allTemplates) {
         try {
-          const attributes = getAttributes(getContentWithLinks(template), true)
+          const attributes = getAttributes(template.content, true)
           if (attributes) {
             // logDebug(pluginJson, `chooseTemplateIfNeeded ${template.filename}: type:${attributes.type} (${typeof attributes.type})`)
             if ((onlyMeetingNotes && attributes.type && attributes.type.includes('meeting-note')) || (!onlyMeetingNotes && (!attributes.type || attributes.type !== 'ignore'))) {

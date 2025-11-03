@@ -27,7 +27,7 @@ import { displayTitle } from '@helpers/general'
 import { clo, JSP, logDebug, logError, logInfo, logWarn, timer } from '@helpers/dev'
 import { getNoteType } from '@helpers/note'
 import { getFirstDateInPeriod, getNPWeekData, getMonthData, getQuarterData, getYearData, nowDoneDateTimeString, toLocaleDateTimeString } from '@helpers/NPdateTime'
-import { endOfFrontmatterLineIndex } from '@helpers/NPFrontMatter'
+// import { getNoteFromFilename } from '@helpers/NPnote'
 import { findStartOfActivePartOfNote, isTermInMarkdownPath, isTermInURL } from '@helpers/paragraph'
 import { RE_FIRST_SCHEDULED_DATE_CAPTURE } from '@helpers/regex'
 import { caseInsensitiveMatch, caseInsensitiveSubstringMatch, caseInsensitiveStartsWith, getLineMainContentPos } from '@helpers/search'
@@ -550,19 +550,19 @@ export async function findHeadingInNotes(
 /**
  * Remove all previously written blocks under a given heading in all notes (e.g. for deleting previous "TimeBlocks" or "SyncedCopies")
  * WARNING: This is DANGEROUS. Could delete a lot of content. You have been warned!
- * @author @dwertheimer, updated by @jgclark
+ * @author @dwertheimer
  * @param {Array<string>} noteTypes - the types of notes to look in -- e.g. ['calendar','notes']
- * @param {string} heading - the heading too look for in the notes (without the #)
- * @param {boolean} keepHeading? - whether to leave the heading in place afer all the content underneath is removed. Default is false.
- * @param {string} runSilently - 'yes' or 'no': whether to show CommandBar popups confirming how many notes will be affected - you should set it to 'yes' when running from a template
- * @param {boolean} syncedOnly? - whether to only remove content under headings that contain only synced copies. Default is false.
+ * @param {string} heading - the heading to look for in the notes (without the #)
+ * @param {boolean} keepHeading - whether to leave the heading in place afer all the content underneath is
+ * @param {boolean} runSilently - whether to show CommandBar popups confirming how many notes will be affected - you should set it to 'yes' when running from a template
+ * @param {boolean?} syncedOnly?
  */
 export async function removeContentUnderHeadingInAllNotes(
   noteTypes: Array<string>,
   heading: string,
   keepHeading: boolean = false,
   runSilently: string = 'no',
-  syncedOnly?: boolean = false,
+  syncedOnly?: boolean,
 ): Promise<void> {
   try {
     logDebug(`NPParagraph`, `removeContentUnderHeadingInAllNotes "${heading}" in ${noteTypes.join(', ')}`)
@@ -1637,7 +1637,6 @@ export function cancelItem(filenameIn: string, content: string): boolean {
  * TODO: extend to delete sub-items as well if wanted.
  * Designed to be called when you're not in an Editor (e.g. an HTML Window).
  * @author @jgclark
- * 
  * @param {string} filenameIn to look in
  * @param {string} content to find
  * @returns {boolean} true if succesful, false if unsuccesful
@@ -1828,33 +1827,4 @@ export function removeAllDueDates(filename: string): boolean {
     logError('removeAllDueDates', error.message)
     return false
   }
-}
-
-/**
- * Get the selected paragraphs with the correct line index, taking into account the frontmatter lines.
- * Note: This attempts to work around the issue that .lineIndex in Editor.paragraphs includes frontmatter lines, but in Editor.selectedParagraphs it doesn't.
- * Note: should really live in editor.js, but putting here to avoid a circular dependency.
- * @author @jgclark
- * 
- * @returns {Array<TParagraph>} the selected paragraphs with the correct line index
- */
-export function getSelectedParagraphsWithCorrectLineIndex(): Array<TParagraph> {
-  const note = Editor.note
-  if (!note) {
-    logInfo('getSelectedParagraphsWithCorrectLineIndex', 'No note open, so returning empty array.')
-    return []
-  }
-  const numberOfFrontmatterLines = endOfFrontmatterLineIndex(note) || 0
-  logDebug('getSelectedParagraphsWithCorrectLineIndex', `numberOfFrontmatterLines: ${String(numberOfFrontmatterLines)}`)
-  const selectedParagraphs = Editor.selectedParagraphs.map((p) => Editor.paragraphs[p.lineIndex]) ?? []
-  logDebug('getSelectedParagraphsWithCorrectLineIndex', `Editor.selectedParagraphs:\n${String(Editor.selectedParagraphs.map((p) => `- ${p.lineIndex}: ${p.content}`).join('\n'))}`)
-  const correctedSelectedParagraphs: Array<TParagraph> = selectedParagraphs.slice()
-  correctedSelectedParagraphs.forEach((p) => {
-    // $FlowIgnore[cannot-write]
-    p.lineIndex += numberOfFrontmatterLines + 1
-  })
-
-  logDebug('getSelectedParagraphsWithCorrectLineIndex', `${correctedSelectedParagraphs.length} Corrected selected paragraph(s) with lineIndex taking into account frontmatter lines:\n${String(correctedSelectedParagraphs.map((p) => `- ${p.lineIndex}: ${p.content}`).join('\n'))}`)
-
-  return correctedSelectedParagraphs
 }

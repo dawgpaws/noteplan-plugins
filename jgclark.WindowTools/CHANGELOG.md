@@ -1,19 +1,7 @@
 # What's changed in 🖥️  Window Tools?
-_Please see the [Plugin documentation](https://noteplan.co/plugins/jgclark.WindowSets/) for more details._
+_Please also see the Plugin [README](https://github.com/NotePlan/plugins/blob/main/jgclark.WindowSets/README.md)._
 
-<!-- - TODO: Extend to deal with closed main sidebars.
-- TODO: Can now save a folder as part of a window set. (Note: not yet a particular 'folder view'.) -->
-
-## [1.4.0] - 2025-11-07
-### New
-- New **reset main window** command. This resets the main NP window to default widths, including the main (left) sidebar (requires NP v3.19.2 or later). Alias: /rmw.
-- Can now open a **folder** as part of a **Window Set**. Note it will only open in the first Editor window.
-- Window Sets can now save the (open) **main sidebar's width**, and open to that width (requires NP v3.19.2).
-- Allows Window Set definitions to include an `icon` and `iconColor`. (These need to be set manually in your Window Sets definition note.)
-- Made a newer, more decorated, chooser for Window Sets, that uses icons where defined.
-- Fix (hopefully) for saving and opening Week notes for users with Sunday as start of week (thanks @oak86 for tip off and @dwertheimer for helping test)
-
-See the documentation (README) for more on how to use these new features.
+<!-- Started: support for Folders in WS. Waiting now for @EM to address a problem found in openNoteByFilename() calls.  -->
 
 ## [1.3.0] - 2025-08-15
 - updated **open note in new split** and **open note in new window** to support Teamspace notes
@@ -76,4 +64,4 @@ First private attempt to use updated API to deal with split window widths proper
 - **/Save window set** command. Now includes window size and position for floating windows. (Incomplete: doesn't yet work for updating existing Window Set definition.)
 
 ## [0.1.0] - 2023-04-04
-- First basic working version. Note: only catering for 5 window sets, due to limitation of configuration system.
+- First basic working version. Note: only catering for 5 window sets, due to limitiation of configuration system.

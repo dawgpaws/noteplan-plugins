@@ -26,9 +26,9 @@ import { getFormattedTime, getISOWeekAndYear, getISOWeekString, hyphenatedDate, 
 
 import { getNPWeekData } from '@helpers/NPdateTime'
 
-import { parseJSON5, getRandomUUID, createOpenOrDeleteNoteCallbackUrl } from '@helpers/general'
+import { parseJSON5, semverVersionToNumber, getRandomUUID } from '@helpers/general'
 
-import { getNote, removeSection, setTitle } from '@helpers/note'
+import { getNote, removeSection } from '@helpers/note'
 
 import { selectFirstNonTitleLineInEditor, getNoteFromIdentifier, getFlatListOfBacklinks, getOrMakeRegularNoteInFolder, getOrMakeCalendarNote, chooseNoteV2 } from '@helpers/NPnote'
 
@@ -61,8 +61,6 @@ import { getOpenTasksAndChildren } from '@helpers/parentsAndChildren'
 import { formatWithNotePlanWeeks } from '@helpers/notePlanWeekFormatter'
 
 import { escapeRegExp } from '@helpers/regex'
-
-import { semverVersionToNumber } from '@helpers/utils'
 
 // Create the main helpers object with only the functions actually imported
 const helpers = {
@@ -103,12 +101,10 @@ const helpers = {
   parseJSON5,
   semverVersionToNumber,
   getRandomUUID,
-  createOpenOrDeleteNoteCallbackUrl,
 
   // Note-related helpers
   getNote,
   removeSection,
-  setTitle,
   selectFirstNonTitleLineInEditor,
   getNoteFromIdentifier,
   getFlatListOfBacklinks,

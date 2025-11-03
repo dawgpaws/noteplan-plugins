@@ -5,7 +5,6 @@
 
 import { getDateStringFromCalendarFilename } from './dateTime'
 import { clo, logDebug, logError, logInfo, logWarn } from './dev'
-import { parseTeamspaceFilename } from './teamspace'
 import { getElementsFromTask } from './sorting'
 import { endOfFrontmatterLineIndex } from '@helpers/NPFrontMatter'
 import {
@@ -185,6 +184,7 @@ export function isTermInEventLinkHiddenPart(term: string, input: string): boolea
 /**
  * Check to see if search term is present in 'path' part of a string potentially containing a markdown link [...](path), using case insensitive searching.
  * Now updated to _not match_ if the search term is present in the rest of the line.
+ * FIXME: errors in tests now, and termNotInURL.
  * @author @jgclark
  *
  * @tests available in jest file
@@ -243,45 +243,21 @@ export function contentRangeToString(content: string, r: TRange): string {
 }
 
 /**
- * Return title of note useful for display.
- * Now updated for Teamspace notes (with 👥 icon).
+ * Return title of note useful for display, including for
+ * - daily calendar notes (the YYYYMMDD)
+ * - weekly notes (the YYYY-Wnn)
  * Note: this is a local copy of the main helpers/general.js to avoid a circular dependency
  * @author @jgclark
  *
- * @param {CoreNoteFields} note to get title for
- * @param {boolean} addTeamspaceIconAndName - whether to add the 👥 icon and teamspace name to the title, where relevant
+ * @param {?TNote} n - note to get title for
  * @return {string}
  */
-export function displayTitle(note: CoreNoteFields, addTeamspaceIconAndName: boolean = true): string {
-  if (!note) {
-    logError('general/displayTitle', 'No note found')
-    return '(error: no note found)'
-  }
-  const basicDisplayTitle = note.title ?? '?'
-  const isTeamspaceNote = note.isTeamspaceNote
-  if (isTeamspaceNote && addTeamspaceIconAndName) {
-    const teamspaceName = note.teamspaceTitle ?? '?'
-    const teamspaceDetails = parseTeamspaceFilename(note.filename)
-    const filenameWithoutTeamspaceID = teamspaceDetails.filename ?? '?'
-    
-    if (note.type === 'Calendar') {
-      return `[👥 ${teamspaceName}] ${filenameWithoutTeamspaceID}`
-    } else {
-      return `[👥 ${teamspaceName}] ${basicDisplayTitle}`
-    }
-  } else {
-    if (note.type === 'Calendar') {
-      if (getDateStringFromCalendarFilename(note.filename)) {
-        return getDateStringFromCalendarFilename(note.filename)
-      }
-    } else {
-      if (note.title) {
-        return note.title
-      }
-    }
-  }
-  logError('general/displayTitle', 'No title found')
-  return '(error: no title found)'
+export function displayTitle(n: ?CoreNoteFields): string {
+  return !n
+    ? '(error)'
+    : n.type === 'Calendar'
+    ? getDateStringFromCalendarFilename(n.filename) ?? '' // earlier: return n.filename.split('.')[0] // without file extension
+    : n.title ?? '(error)'
 }
 
 /**
@@ -583,7 +559,7 @@ export function findStartOfActivePartOfNote(note: CoreNoteFields, allowPreamble?
     // or 'allowPreamble' is true.
     // If there is, run on to next heading or blank line (if found) otherwise, just the next line. Finding a separator or any YouTutype of task or checklist also stops the search.
     if (allowPreamble || (paras[startOfActive] && paras[startOfActive].type === 'text' && paras[startOfActive].content.match(/^#\w/))) {
-      // logDebug('paragraph/findStartOfActivePartOfNote', `- We want to allow preamble, or there's a hashtag starting the next line.`)
+      // logDebug('paragraph/findStartOfActivePartOfNote', `- We want to allow preamble, or found a metadata line.`)
       // startOfActive += 1
       for (let i = startOfActive; i < paras.length; i++) {
         const p = paras[i]
@@ -939,26 +915,5 @@ export function addParagraphsToNote(
     }
   } catch (err) {
     logError('paragraph/addParagraphsToNote', err.message)
-  }
-}
-
-/**
- * Set any complete or cancelled task/checklist paragraph to not complete. Will leave other paragraph types unchanged.
- * @author @jgclark
- * @param {TParagraph} paragraph to set to incomplete
- */
-export function setParagraphToIncomplete(p: TParagraph): void {
-  if (p.type === 'done') {
-    logDebug('setParagraphToIncomplete', `>> changed done -> open`)
-    p.type = 'open'
-  } else if (p.type === 'cancelled') {
-    logDebug('setParagraphToIncomplete', `>> changed cancelled -> open`)
-    p.type = 'open'
-  } else if (p.type === 'checklistDone') {
-    logDebug('setParagraphToIncomplete', `>> changed checklistDone -> checklist`)
-    p.type = 'checklist'
-  } else if (p.type === 'checklistCancelled') {
-    logDebug('setParagraphToIncomplete', `>> changed checklistCancelled -> checklist`)
-    p.type = 'checklist'
   }
 }

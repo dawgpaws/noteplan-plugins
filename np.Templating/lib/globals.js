@@ -21,7 +21,8 @@ import { getDailyQuote } from './support/modules/quote'
 import { getStoicQuote } from './support/modules/stoicQuotes'
 import { getVerse } from './support/modules/verse'
 import { getWOTD } from './support/modules/wotd'
-import { getNotePlanWeather } from './support/modules/notePlanWeather'
+import { getWeather } from './support/modules/weather'
+import { getWeatherSummary } from './support/modules/weatherSummary'
 import { parseJSON5 } from '@helpers/general'
 import { getSetting } from '../../helpers/NPConfiguration'
 import { log, logError, clo, logDebug } from '@helpers/dev'
@@ -84,18 +85,13 @@ const globals = {
     return await invokePluginCommandByName('jgclark.Summaries', 'todayProgressFromTemplate', [JSON.stringify(params)])
   },
 
-  weather: async (formatParam: string = '', units?: string | null, latitude?: number | null, longitude?: number | null): Promise<string | any> => {
-    // Get format from settings or param (backward compatible)
+  weather: async (formatParam: string = ''): Promise<string> => {
     let weatherFormat = (await getSetting(pluginJson['plugin.id'], 'weatherFormat', '')) || ''
     if (formatParam.length > 0) {
       weatherFormat = formatParam
     }
-    const resolvedUnits = units === undefined || units === null || units === '' ? undefined : units
-    const resolvedLatitude = latitude === undefined || latitude === null ? undefined : latitude
-    const resolvedLongitude = longitude === undefined || longitude === null ? undefined : longitude
-    logDebug(`weather format: "${weatherFormat}", units: "${resolvedUnits ?? 'default'}", lat: ${resolvedLatitude ?? 'auto'}, lon: ${resolvedLongitude ?? 'auto'}`)
-    const resolvedFormat = weatherFormat === undefined || weatherFormat === null || weatherFormat.trim().length === 0 ? undefined : weatherFormat
-    return await getNotePlanWeather(resolvedFormat, resolvedUnits, resolvedLatitude, resolvedLongitude)
+    logDebug(`weather format: "${weatherFormat}", will call ${weatherFormat.length === 0 ? 'getWeather' : 'getWeatherSummary'}`)
+    return weatherFormat.length === 0 ? await getWeather() : await getWeatherSummary(weatherFormat)
   },
 
   date8601: async (): Promise<string> => {

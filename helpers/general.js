@@ -10,13 +10,9 @@ import { getDateStringFromCalendarFilename } from './dateTime'
 import { getFolderFromFilename } from './folders'
 import { parseTeamspaceFilename } from './teamspace'
 
-//-------------------------------------------------------------------------------
-// Types
-
 export type headingLevelType = 1 | 2 | 3 | 4 | 5
 
 //-------------------------------------------------------------------------------
-
 /**
  * Case Insensitive version of Map
  * Keeps the first seen capitalasiation of a given key in a private #keysMap
@@ -174,41 +170,25 @@ export function rangeToString(r: TRange): string {
 
 /**
  * Return title of note useful for display.
- * Now updated for Teamspace notes
+ * FIXME(EduardMe): Produces error for Teamspace Calendar notes.
  * Note: local copy of this in helpers/paragraph.js to avoid circular dependency.
- * Now updated for Teamspace notes (with 👥 icon)
  * @author @jgclark
  *
- * @param {CoreNoteFields} note to get title for
- * @param {boolean} addTeamspaceIconAndName - whether to add the 👥 icon and teamspace name to the title, where relevant
+ * @param {?CoreNoteFields} n - note to get title for
  * @return {string}
  */
-export function displayTitle(note: CoreNoteFields, addTeamspaceIconAndName: boolean = true): string {
-  if (!note) {
+export function displayTitle(n: ?CoreNoteFields): string {
+  if (!n) {
     logError('general/displayTitle', 'No note found')
     return '(error: no note found)'
   }
-  const basicDisplayTitle = note.title ?? '?'
-  const isTeamspaceNote = note.isTeamspaceNote
-  if (isTeamspaceNote && addTeamspaceIconAndName) {
-    const teamspaceName = note.teamspaceTitle ?? '?'
-    const teamspaceDetails = parseTeamspaceFilename(note.filename)
-    const filenameWithoutTeamspaceID = teamspaceDetails.filename ?? '?'
-    
-    if (note.type === 'Calendar') {
-      return `[👥 ${teamspaceName}] ${filenameWithoutTeamspaceID}`
-    } else {
-      return `[👥 ${teamspaceName}] ${basicDisplayTitle}`
+  if (n.type === 'Calendar') {
+    if (getDateStringFromCalendarFilename(n.filename)) {
+      return getDateStringFromCalendarFilename(n.filename)
     }
   } else {
-    if (note.type === 'Calendar') {
-      if (getDateStringFromCalendarFilename(note.filename)) {
-        return getDateStringFromCalendarFilename(note.filename)
-      }
-    } else {
-      if (note.title) {
-        return note.title
-      }
+    if (n.title) {
+      return n.title
     }
   }
   logError('general/displayTitle', 'No title found')
@@ -217,7 +197,7 @@ export function displayTitle(note: CoreNoteFields, addTeamspaceIconAndName: bool
 
 /**
  * Return title of note useful for display, starting with folder path.
- * Now updated for Teamspace notes (with 👥 icon)
+ * Now updated for Teamspace notes
  * @author @jgclark
  *
  * @param {CoreNoteFields} note
@@ -503,7 +483,6 @@ export async function getTagParamsFromString(paramString: string, wantedParam: s
       throw new Error('JSON5 parsing did not return an object')
     }
     // clo(paramObj, 'paramObj')
-    // $FlowIgnore(invalid-computed-prop)
     const output = paramObj.hasOwnProperty(wantedParam) ? paramObj[wantedParam] : defaultValue
     // logDebug('general/getTagParamsFromString', `--> ${output} type ${typeof output}`)
     return output

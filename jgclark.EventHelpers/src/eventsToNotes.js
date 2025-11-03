@@ -9,8 +9,10 @@ import pluginJson from '../plugin.json'
 import { getEventsSettings } from './eventsHelpers'
 import { getEventsForDay, type EventsConfig } from '@helpers/NPCalendar'
 import {
+  calcOffsetDateStr,
   getCalendarNoteTimeframe,
   getDateFromYYYYMMDDString,
+  getDateStrForStartofPeriodFromCalendarFilename,
   isDailyNote,
   isWeeklyNote,
   toLocaleDateString,
@@ -18,7 +20,7 @@ import {
 } from '@helpers/dateTime'
 import { clo, logDebug, logError, logWarn } from '@helpers/dev'
 import { getTagParamsFromString } from '@helpers/general'
-import { calcOffsetDateStr, getDateStrForStartofPeriodFromCalendarFilename, toNPLocaleDateString } from '@helpers/NPdateTime'
+import { toNPLocaleDateString } from '@helpers/NPdateTime'
 import { showMessage } from '@helpers/userInput'
 
 // ----------------------------------------------------------------------------

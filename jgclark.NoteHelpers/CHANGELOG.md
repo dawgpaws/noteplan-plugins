@@ -1,17 +1,9 @@
 # What's changed in 📙 Note Helpers plugin?
 For more details see the [plugin's README](https://github.com/NotePlan/plugins/tree/main/jgclark.NoteHelpers/).
 
-## [1.2.5] - 2025-11-10
-- fix regression in folder chooser (thanks, @aleemshaun)
-
-## [1.2.4] - 2025-11-08
-- Improvements in heading picker in **jump to heading** and **jump to note's heading** commands
-
-## [1.2.3] - 2025-10-31
-- Fix to **moveNote** command for iOS/iPadOS
 
 ## [1.2.2] - 2025-09-22
-- Fix regression in folder picker
+- Fix regression in folder picker.
 
 ## [1.2.1] - 2025-09-19
 - improve and fix folder picker in various commands (including updating the sort order to match the app -- thanks for pointing this out, @tastapod)

@@ -1,10 +1,10 @@
 {
   "macOS.minVersion": "10.13.0",
-  "noteplan.minAppVersion": "3.19.2",
+  "noteplan.minAppVersion": "3.18.2",
   "plugin.id": "np.Templating",
   "plugin.name": "📒 Templating",
-  "plugin.version": "2.2.2",
-  "plugin.lastUpdateInfo": "2.2.2: ensure default weather format applies when calling weather() with no args",
+  "plugin.version": "2.1.1",
+  "plugin.lastUpdateInfo": "2.1.1: - add chooseFolder using new chooseFolder() helper function including teamspaces",
   "plugin.description": "Templating Plugin for NotePlan",
   "plugin.author": "Mike Erickson ( codedungeon)",
   "plugin.dependencies": [],
@@ -153,9 +153,9 @@
       "hidden": true
     },
     {
-      "name": "getTemplateContent",
-      "description": "NPTemplating.getTemplateContent export",
-      "jsFunction": "getTemplateContent",
+      "name": "getTemplate",
+      "description": "NPTemplating.getTemplate export",
+      "jsFunction": "getTemplate",
       "hidden": true
     },
     {

@@ -1,0 +1,620 @@
+{
+  "COMMENT": "Details on these fields: https://help.noteplan.co/article/67-create-command-bar-plugins",
+  "macOS.minVersion": "10.13.0",
+  "noteplan.minAppVersion": "3.4.0",
+  "plugin.id": "dawgpaws.TaskAutomationsUpdated",
+  "plugin.name": "🧩 Task Automations Updated",
+  "plugin.version": "0.1.0",
+  "plugin.lastUpdateInfo": "Describe this update",
+  "plugin.description": "My Plugin for NotePlan",
+  "plugin.author": "dawgpaws",
+  "plugin.requiredFiles-EDIT_ME": ["html-plugin-comms.js"],
+  "plugin.requiredFiles-NOTE": "If you want to use HTML windows, remove the '-EDIT_ME' ABOVE",
+  "plugin.dependsOn": [],
+  "plugin.script": "script.js",
+  "plugin.url": "https://github.com/NotePlan/plugins/blob/main/dawgpaws.TaskAutomationsUpdated/README.md",
+  "plugin.changelog": "https://github.com/NotePlan/plugins/blob/main/dawgpaws.TaskAutomationsUpdated/CHANGELOG.md",
+  "settingsToCopy": [
+    "defaultSort1",
+    "defaultSort2",
+    "defaultSort3",
+    "outputOrder",
+    "sortInHeadings",
+    "tasksToTop",
+    "includeHeading",
+    "includeSubHeading",
+    "eliminateSpinsters",
+    "stopAtDoneHeading"
+  ],
+  "plugin.dependencies": [],
+  "plugin.requiredFiles": [
+    "css.plugin.css",
+    "css.w3.css",
+    "react.c.WebView.bundle.min.js",
+    "react.c.WebView.bundle.dev.js"
+  ],
+  "plugin.script": "script.js",
+  "plugin.url": "https://github.com/NotePlan/plugins/blob/main/dwertheimer.TaskAutomations/readme.md",
+  "plugin.commands": [
+    {
+      "name": "TEST onUpdateOrInstall command - DELETEME",
+      "jsFunction": "testOnUpdateOrInstall",
+      "description": "Use xcallback to hit it",
+      "hidden": true
+    },
+    {
+      "name": "Update Plugin Settings",
+      "description": "Preferences",
+      "jsFunction": "editSettings"
+    },
+    {
+      "name": "Task Sync",
+      "description": "Create synced copies of tasks containing a string in a new document",
+      "jsFunction": "taskSync",
+      "hidden": true,
+      "arguments": [
+        "search string",
+        "type of notes to search in (['calendar', 'notes'])",
+        "types of tasks to include (['open', 'scheduled', 'done', 'cancelled'])",
+        "fields to sort by (['date', '-priority', 'title']) (minus at front for descending order)",
+        "filename to save the output to (with or without the file extension)",
+        "folders to look in",
+        "folder to ignore",
+        "heading-TBD"
+      ]
+    },
+    {
+      "name": "Review overdue tasks (by Task)",
+      "description": "Search for overdue tasks in all Calendar (and optionally Project) Notes",
+      "jsFunction": "reviewOverdueTasksByTask",
+      "alias": [
+        "updateTasks"
+      ],
+      "arguments": [
+        "Date to look for overdue tasks -- leave empty for today. Format: YYYY-MM-DD"
+      ]
+    },
+    {
+      "name": "Review Overdue Tasks as of <Date>",
+      "description": "e.g. search as of Tomorrow or later",
+      "jsFunction": "reviewOverdueTasksAsOfDate",
+      "alias": [
+        "tomorrow",
+        "future"
+      ],
+      "arguments": [
+        "A specific date in the future to run it for. Format: YYYY-MM-DD, or 'tomorrow'"
+      ]
+    },
+    {
+      "name": "Search Notes for Open Tasks",
+      "description": "Search Calendar Notes (and optionally Project Notes) for open tasks to process",
+      "jsFunction": "searchForOpenTasks",
+      "alias": [
+        "openTasks",
+        "searchTasks",
+        "forgotten",
+        "leftOpen"
+      ],
+      "arguments": []
+    },
+    {
+      "name": "Review overdue tasks (in Active Note)",
+      "description": "Search for overdue tasks in the foreground note",
+      "jsFunction": "reviewOverdueTasksInNote",
+      "alias": [
+        "updatenoteTaskList"
+      ],
+      "arguments": [
+        "By default will ask you to confirm changes. 'silent' here to to update tasks silently"
+      ]
+    },
+    {
+      "name": "Review/Reschedule Tasks Scheduled for this week",
+      "description": "Review all tasks marked for or on this week's note",
+      "jsFunction": "reviewWeeklyTasks",
+      "alias": [
+        "weekly"
+      ],
+      "arguments": [
+        "By default will ask you to confirm changes. 'silent' here to to update tasks silently"
+      ]
+    },
+    {
+      "name": "Review/Reschedule Tasks Dated Today",
+      "description": "Review all tasks marked for today's date",
+      "jsFunction": "reviewEditorReferencedTasks",
+      "alias": [
+        "references"
+      ],
+      "arguments": [
+        "By default will ask you to confirm changes. 'silent' here to to update tasks silently"
+      ]
+    },
+    {
+      "name": "Process Overdue Items in a Separate Window",
+      "description": "Mac-only - Uses HTML Popup/React",
+      "jsFunction": "processOverdueReact",
+      "hidden": true,
+      "alias": [
+        "react"
+      ],
+      "arguments": [
+        "Task Filter setting: 'All', 'Overdue', 'LeftOpen', 'Today'"
+      ]
+    },
+    {
+      "name": "Process Overdue Items in a Specific Folder",
+      "description": "Uses HTML Popup/React",
+      "jsFunction": "processFolderReact",
+      "hidden": true,
+      "alias": [
+        "reactFolder"
+      ],
+      "arguments": [
+        "Folder to search for tasks (no trailing slash)",
+        "Task Filter setting: 'All', 'Overdue', 'LeftOpen', 'Today'"
+      ]
+    },
+    {
+      "name": "testOverdueReact",
+      "description": "testOverdueReact",
+      "jsFunction": "testOverdueReact",
+      "hidden": true,
+      "alias": [
+        "tor"
+      ],
+      "arguments": []
+    },
+    {
+      "name": "onUserModifiedParagraphs",
+      "description": "Paragraph info was changed in React HTML window",
+      "jsFunction": "onUserModifiedParagraphs",
+      "alias": [],
+      "hidden": true,
+      "arguments": []
+    },
+    {
+      "name": "Review overdue tasks in <Choose Folder>",
+      "description": "Search for overdue tasks in a folder you choose review them individually, setting to >today if today is >= the date",
+      "jsFunction": "reviewOverdueTasksInFolder",
+      "alias": [
+        "updateFolderTasks"
+      ],
+      "arguments": [
+        "By default will ask you to confirm changes. 'silent' here to to update tasks silently"
+      ]
+    },
+    {
+      "name": "Mark done and create follow-up underneath",
+      "description": "Create a follow-up task and save it just below the task in question",
+      "jsFunction": "followUpSaveHere",
+      "alias": [
+        "followupunder",
+        "followuphere",
+        "fuphere",
+        "fupunder"
+      ],
+      "arguments": []
+    },
+    {
+      "name": "Mark done and create follow-up in future note",
+      "description": "Create a follow-up task in a future note",
+      "jsFunction": "followUpInFuture",
+      "alias": [
+        "followupfuture",
+        "fupfuture"
+      ],
+      "arguments": []
+    },
+    {
+      "COMMENT": "HIDING FOR NOW, PROBABLY DELETING LATER, WITH OVERDUE TASK SCAN Date+ PROBABLY ISN'T NECESSARY",
+      "name": "Update >date+ (Date-Plus) tags in Notes",
+      "hidden": true,
+      "description": "Search for >date+ tags in all notes and update them to >today if today is >= the date",
+      "jsFunction": "updateDatePlusTags",
+      "alias": [
+        "updateDatePlusTags"
+      ],
+      "arguments": [
+        "By default will ask you to confirm changes. Put any word/characters here to to update tasks silently"
+      ]
+    }
+  ],
+  "disabled": [
+    {
+      "name": "ott",
+      "description": "Open Tasks to Top - Bring open tasks in note to top",
+      "jsFunction": "openTasksToTop"
+    }
+  ],
+  "SEP": "***********************************************************************************************",
+  "plugin.settings": [
+    {
+      "type": "hidden",
+      "key": "pluginID",
+      "default": "dwertheimer.TaskAutomations"
+    },
+    {
+      "type": "heading",
+      "title": "Follow-up Task Settings"
+    },
+    {
+      "key": "followUpText",
+      "title": "Text Prepended to Follow-up Tasks",
+      "description": "When ‘Mark done and create follow-up’ tasks are created, this text will be automatically prepended to the follow-up task. Can be any text, hashtag (or blank)",
+      "type": "string",
+      "default": "#FollowUp",
+      "required": true
+    },
+    {
+      "key": "followUpLinkIsWikiLink",
+      "title": "Use [[WikiLink^123456]] for link to original task",
+      "description": "When creating a link to the original task, if this field is checked, a [[WikiLink]] will be used for the link to the original task. If unchecked, it will be a pretty link with the text below.",
+      "type": "bool",
+      "default": true,
+      "required": true
+    },
+    {
+      "key": "followUpLinkText",
+      "title": "Text/Emoji to use for link to original task",
+      "description": "If the previous setting is unset (not checked), this text will be used for the link to the original task.",
+      "type": "string",
+      "default": "original task",
+      "required": true
+    },
+    {
+      "DELETE_ME_IN_FUTURE": "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv",
+      "DELETE_ME_IN_FUTURE2": "Task Sorter settings to be removed in a future release"
+    },
+    {
+      "type": "separator"
+    },
+    {
+      "type": "heading",
+      "title": "Task Sorting Default Settings (these commands have been moved to the Task Sorting plugin. Settings remain here temporarily to migrate them if you auto-installed the new plugin)"
+    },
+    {
+      "key": "defaultSort1",
+      "title": "Default Sort: Primary Sort Field",
+      "description": "When invoking the default sorting method (/tsd), sort first by this field. Note: a minus in front means sort that key in reverse order. hashtags are for #tags, mentions are for @mentions, priority is the number of !!!'s and content is alphabetical.",
+      "type": "string",
+      "default": "-priority",
+      "required": true,
+      "choices": [
+        "priority",
+        "-priority",
+        "due",
+        "-due",
+        "mentions",
+        "-mentions",
+        "hashtags",
+        "-hashtags",
+        "content",
+        "-content"
+      ]
+    },
+    {
+      "key": "defaultSort2",
+      "title": "Default Sort: Secondary Sort Field",
+      "description": "When invoking the default sorting method (/tsd), sort secondly by this field (for all fields in the first sort pass above which were the same). Note: a minus in front means sort that key in reverse order. hashtags are for #tags, mentions are for @mentions, priority is the number of !!!'s and content is alphabetical.",
+      "type": "string",
+      "default": "hashtags",
+      "required": true,
+      "choices": [
+        "priority",
+        "-priority",
+        "due",
+        "-due",
+        "mentions",
+        "-mentions",
+        "hashtags",
+        "-hashtags",
+        "content",
+        "-content"
+      ]
+    },
+    {
+      "key": "defaultSort3",
+      "title": "Default Sort: Tertiary Sort Field",
+      "description": "When invoking the default sorting method (/tsd), sort thirdly by this field (for all fields in the first sorts pass above which were the same). Note: a minus in front means sort that key in reverse order. hashtags are for #tags, mentions are for @mentions, priority is the number of !!!'s and content is alphabetical.",
+      "type": "string",
+      "default": "mentions",
+      "required": true,
+      "choices": [
+        "priority",
+        "-priority",
+        "due",
+        "-due",
+        "mentions",
+        "-mentions",
+        "hashtags",
+        "-hashtags",
+        "content",
+        "-content"
+      ]
+    },
+    {
+      "key": "outputOrder",
+      "title": "Output order (by type)",
+      "description": "After tasks are sorted, tasks are grouped by their type (status). In what order do you want the task groups outputted?",
+      "choices": [
+        "open, scheduled, done, cancelled",
+        "open, scheduled, cancelled, done",
+        "done, cancelled, open, scheduled",
+        "open, done, cancelled, scheduled",
+        "open, cancelled, done, scheduled",
+        "scheduled, open, done, cancelled",
+        "scheduled, open, cancelled, done",
+        "scheduled, done, cancelled, open",
+        "scheduled, cancelled, done, open",
+        "done, open, cancelled, scheduled",
+        "done, scheduled, cancelled, open",
+        "cancelled, open, done, scheduled",
+        "cancelled, scheduled, done, open",
+        "cancelled, done, open, scheduled",
+        "cancelled, done, scheduled, open"
+      ],
+      "type": "string",
+      "default": "open, scheduled, done, cancelled",
+      "required": true
+    },
+    {
+      "key": "sortInHeadings",
+      "title": "Sort tasks separately for each heading?",
+      "description": "For all quick task sorting commands (other than /ts), do you want each set of tasks under each heading to be sorted separately and placed back underneath the heading? Uncheck this if you want to ignore the headings in the sort.",
+      "type": "bool",
+      "default": true,
+      "required": true
+    },
+    {
+      "key": "tasksToTop",
+      "title": "Put tasks at the top (before any textual items)?",
+      "description": "After tasks are sorted, do you want to put all the tasks at the top of the note (or section), before any other text? Uncheck this if you want the tasks to float to the bottom beneath any other text.",
+      "type": "bool",
+      "default": true,
+      "required": true
+    },
+    {
+      "key": "includeHeading",
+      "title": "Include Task Status Heading in Output?",
+      "description": "For all quick task sorting commands (other than /ts), you can specify whether you want the headings to be in the output or not. Task Status headings are, e.g. 'Open Tasks', 'Completed Tasks’, etc.",
+      "type": "bool",
+      "default": true,
+      "required": true
+    },
+    {
+      "key": "includeSubHeading",
+      "title": "Include Primary Sort Key Heading in Output?",
+      "description": "For all quick task sorting commands (other than /ts), you can specify whether you want the subheadings to be in the output or not. Sort Key headings are, e.g. '#tagA', or '@PersonB', etc.",
+      "type": "bool",
+      "default": true,
+      "required": true
+    },
+    {
+      "key": "eliminateSpinsters",
+      "title": "Eliminate Headings with No Content",
+      "description": "After running this command multiple times, you may end up with widowed headings that have no content underneath. If this is checked, after tasks are sorted, the plugin will delete any third/fourth level headings with no content underneath.\nBEWARE: It's pretty smart/careful about what empty headings it deletes, but if you have other empty 4th level headings ending in a colon in your document, don't!",
+      "type": "bool",
+      "default": false,
+      "required": true
+    },
+    {
+      "key": "stopAtDoneHeading",
+      "title": "Stop at 'Done' or 'Cancelled' heading",
+      "description": "Some people like to archive tasks on a page under a '## Done' or '## Cancelled' heading. If this is option is checked, tasks under the Done/Cancelled heading will be ignored for sorts. If there is no Done or Canclled heading, it will process the entire page.",
+      "type": "bool",
+      "default": false,
+      "required": true
+    },
+    {
+      "DELETE_ME_IN_FUTURE3": "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+      "DELETE_ME_IN_FUTURE4": "Task Sorter settings to be removed in a future release"
+    },
+    {
+      "type": "separator"
+    },
+    {
+      "type": "heading",
+      "title": "Overdue Task Scan Settings"
+    },
+    {
+      "key": "numLastUsedChoices",
+      "title": "Show last N frequently used rescheduling choices at top",
+      "description": "If this is set to any number other than zero, the first choices in the rescheduler CommandBar will be your N most frequently used choices, sorted in order of most frequent usage. Set N above.",
+      "type": "[string]",
+      "default": 5,
+      "required": true,
+      "choices": [
+        "0",
+        "1",
+        "3",
+        "5",
+        "10"
+      ]
+    },
+    {
+      "type": "hidden",
+      "key": "lastUsedChoicesJsonStr",
+      "default": "{}"
+    },
+    {
+      "key": "overdueOpenOnly",
+      "title": "Look only for OPEN/incomplete tasks with >date that has passed",
+      "description": "When searching for overdue tasks, only look for tasks that are OPEN/incomplete. If unchecked, it will find/process all lines containing a >date tag, whether plain text lines, list/bullets, or completed items.",
+      "type": "hidden",
+      "default": true,
+      "required": true
+    },
+    {
+      "key": "replaceDate",
+      "title": "When displaying overdue tasks, hide the original date",
+      "description": "When processing overdue tasks, the default is to hide the pre-existing date. Uncheck this option if you want to show the date.",
+      "type": "bool",
+      "default": true,
+      "required": true
+    },
+    {
+      "NOTE": "Not currently used",
+      "key": "showUpdatedTask",
+      "title": "When reviewing, show UPDATED task",
+      "description": "[Selected] = When reviewing overdue tasks, display the way the task will read after the change to >today.\n[UNSELECTED] = Show the task as it exists now in the note",
+      "type": "hidden",
+      "default": true,
+      "required": true
+    },
+    {
+      "key": "overdueFoldersToIgnore",
+      "title": "Folders to ignore when searching for overdue tasks",
+      "description": "A comma-separated list of folders to ignore when searching for overdue tasks.",
+      "type": "[string]",
+      "default": [
+        "@Templates",
+        "@Searches",
+        "Reviews",
+        "Summaries",
+        "@Archive"
+      ],
+      "required": false
+    },
+    {
+      "key": "forgottenFoldersToIgnore",
+      "title": "Folders to ignore when searching for forgotten tasks",
+      "description": "A comma-separated list of folders to ignore when searching for overdue/potentially forgotten tasks.",
+      "type": "[string]",
+      "default": [
+        "@Templates",
+        "@Searches",
+        "Reviews",
+        "Summaries",
+        "@Archive"
+      ],
+      "required": false
+    },
+    {
+      "key": "askToReviewTodaysTasks",
+      "title": "Review Today's References After Overdue",
+      "description": "After reviewing overdue tasks, if this box is checked, you will be asked if you want to interactively review the tasks marked for today.",
+      "type": "bool",
+      "default": true,
+      "required": true
+    },
+    {
+      "key": "askToReviewWeeklyTasks",
+      "title": "Review Weekly Tasks After Overdue",
+      "description": "After reviewing overdue tasks, if this box is checked, you will be asked if you want to interactively review all tasks which are on this week's note or tagged for this >week.",
+      "type": "bool",
+      "default": true,
+      "required": true
+    },
+    {
+      "key": "askToReviewForgottenTasks",
+      "title": "Review Forgotten Tasks After Overdue",
+      "description": "After reviewing overdue tasks, if this box is checked, you will be asked if you want to interactively review all open tasks which exist in previous Calendar (or Project) notes over a specified period of time.",
+      "type": "bool",
+      "default": true,
+      "required": true
+    },
+    {
+      "key": "ignoreScheduledInForgottenReview",
+      "title": "Ignore all scheduled tasks in forgotten task review",
+      "description": "When searching for forgotten tasks, should we ignore all tasks which have a date set? This seems to be safe, because if something is overdue, the overdue filter will pick it up, and if scheduled for in the future, why mess with it? If you uncheck this, the review cycle will include all tasks, including scheduled ones.",
+      "type": "bool",
+      "default": true,
+      "required": true
+    },
+    {
+      "key": "searchForgottenTasksOldestToNewest",
+      "title": "Search Forgotten Tasks Oldest to Newest",
+      "description": "When searching for forgotten tasks, start with oldest files first (otherwise, starts with newest).",
+      "type": "bool",
+      "default": true,
+      "required": true
+    },
+    {
+      "COMMENT": "HIDING FOR NOW, PROBABLY DELETING LATER, WITH OVERDUE TASK SCAN Date+ PROBABLY ISN'T NECESSARY",
+      "key": "datePlusOpenOnly",
+      "title": "Look only for OPEN/incomplete tasks with >date+",
+      "description": "When searching for >date+ tags, only look for tasks that are OPEN/incomplete. If unchecked, it will find/process all lines containing a >date+ tag, whether plain text lines, list/bullets, or completed items.",
+      "type": "hidden",
+      "default": true,
+      "required": true
+    },
+    {
+      "COMMENT": "HIDING FOR NOW, PROBABLY DELETING LATER, WITH OVERDUE TASK SCAN Date+ PROBABLY ISN'T NECESSARY",
+      "key": "datePlusFoldersToIgnore",
+      "title": "Folders to ignore when searching for >Date+ Tags",
+      "description": "A comma-separated list of folders to ignore when searching for items tagged >date+.",
+      "type": "hidden",
+      "default": [
+        "@Templates",
+        "@Searches",
+        "Reviews",
+        "Summaries",
+        "@Archive"
+      ],
+      "required": false
+    },
+    {
+      "type": "separator"
+    },
+    {
+      "type": "heading",
+      "title": "Overdue Processing Pop-Up Window Settings"
+    },
+    {
+      "key": "reactShowDueInColumn",
+      "title": "Show 'Due in X Days’ column in popup window",
+      "description": "Show due in X days (negative for overdue) column in output.",
+      "type": "bool",
+      "default": true,
+      "required": true,
+      "OTHER:": "choices: [array of options], boxHeight: set size of input box"
+    },
+    {
+      "type": "separator"
+    },
+    {
+      "type": "heading",
+      "title": "Task Sync Output Settings"
+    },
+    {
+      "key": "includeInstructions",
+      "type": "bool",
+      "default": true,
+      "title": "Include Reminder Text in Output",
+      "description": "By default, there is text appended to the note reminding you not to add content in the search results (because it will be overwritten). This setting allows you to suppress that instruction if you will remember it on your own."
+    },
+    {
+      "key": "defaultFolderName",
+      "type": "string",
+      "default": "@TaskSync",
+      "required": true,
+      "title": "Default Folder Name",
+      "description": "If no filename is provided, a filename will be generated from the search string and the results will be saved in this folder. Setting a filename overrides this setting."
+    },
+    {
+      "NOTE": "DO NOT CHANGE THE FOLLOWING SETTINGS; ADD YOUR SETTINGS ABOVE ^^^",
+      "type": "separator"
+    },
+    {
+      "type": "heading",
+      "title": "Debugging"
+    },
+    {
+      "key": "_logLevel",
+      "type": "string",
+      "title": "Log Level",
+      "choices": [
+        "DEBUG",
+        "INFO",
+        "WARN",
+        "ERROR",
+        "none"
+      ],
+      "description": "Set how much output will be displayed for this plugin the NotePlan > Help > Plugin Console. DEBUG is the most verbose; NONE is the least (silent)",
+      "default": "LOG",
+      "required": true
+    }
+  ]
+}

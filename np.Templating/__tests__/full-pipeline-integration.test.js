@@ -150,7 +150,7 @@ jest.mock('../lib/TemplatingEngine', () => {
  */
 jest.mock('../lib/core', () => {
   return {
-    getTemplateContent: jest.fn().mockImplementation((templateName) => {
+    getTemplate: jest.fn().mockImplementation((templateName) => {
       return Promise.resolve(TEMPLATE_CONTENT[templateName] || '')
     }),
     getTemplateFolder: jest.fn().mockResolvedValue('@Templates'),
