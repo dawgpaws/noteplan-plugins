@@ -92,25 +92,24 @@ export async function managePeopleNotes(): Promise<void> {
       logDebug(pluginJson, `Found ${mentions.length} mentions in your notes.`)
     }
 
-    // Filter mentions to those starting with your prefix (e.g. @ or @person_)
-    // const filtered = mentions.filter(m => m.title.startsWith(personPrefix))
-    // logDebug(pluginJson, `Filtered to ${filtered.length} mentions with prefix "${personPrefix}".`)
-
     let createdCount = 0
     for (const mention of mentions) {
       const personName = mention
       const fileName = `${personName}.md`
-      const path = `${peopleFolder}/${fileName}`
+      const path = `${peopleFolder}/${ fileName}`
       logDebug(pluginJson, `Processing mention: ${personName} (will check/create note at ${path})`)
 
       // Check if note already exists
-      const existing = DataStore.projectNoteByFilename(path)
-      logDebug(pluginJson, existing)
-      if (!existing) {
+      const existing = DataStore.projectNoteByTitle(personName, false, false)
+      if (!existing || existing.length === 0) {
         logDebug(pluginJson, `Note for ${personName} does not exist. Creating...`)
-        const templateNote = DataStore.noteByFilename(peopleTemplate)
-        const templateContent = templateNote ? templateNote.content : ''
-        // await DataStore.newNote(templateContent, peopleFolder, personName)
+        const template = DataStore.projectNoteByTitle(peopleTemplate, false, false)[0]
+        let content = template.content || ''
+        content = content.replace(/^---\n[\s\S]*?\n---\n/, '')
+        content = content.replace(/^--\n/g, '---\n')
+        content = content.replace(/\n--\n/g, '\n---\n')
+        content = content.replace(/{{\s*personName\s*}}/g, personName)
+        await DataStore.newNoteWithContent(content, peopleFolder, personName)
         createdCount++
       } else {
         logDebug(pluginJson, `Note for ${personName} already exists. Skipping.`)
@@ -121,7 +120,7 @@ export async function managePeopleNotes(): Promise<void> {
       createdCount > 0
         ? `✅ Created ${createdCount} new People notes.`
         : `✅ All People notes already exist.`
-    // await CommandBar.prompt(message)
+    await CommandBar.prompt("Completed", message)
   } catch (error) {
     console.error('Error in PeopleNotes plugin:', error)
     await CommandBar.prompt(`❌ Error: ${String(error)}`)
