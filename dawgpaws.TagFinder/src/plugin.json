@@ -1,0 +1,18 @@
+{
+  "macOS.minVersion": "10.13.0",
+  "noteplan.minAppVersion": "3.7.2",
+  "plugin.id": "nickevans.tagfinder",
+  "plugin.name": "TagFinder",
+  "plugin.description": "Finds all instances of a specified tag in daily notes within a date range.",
+  "plugin.author": "Nick Evans",
+  "plugin.version": "1.0.0",
+  "plugin.script": "script.js",
+  "plugin.commands": [
+    {
+      "name": "findTagInstances",
+      "description": "Find all instances of a tag between two dates",
+      "jsFunction": "findTagInstances",
+      "params": ["tag"]
+    }
+  ]
+}
